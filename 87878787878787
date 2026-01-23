@@ -62,6 +62,10 @@ local translateAccelEnabled = false
 local _G = _G or getfenv(0)._G
 _G.FastAttack = _G.FastAttack ~= nil and _G.FastAttack or true
 
+-- 極速攻擊設定
+local ULTRA_FAST_ATTACK = false
+local ATTACK_COOLDOWN_LIMIT = 0.001
+
 -- 創建主窗口
 local Window = WindUI:CreateWindow({
     Title = "人擠人中心",
@@ -213,8 +217,6 @@ Tabs.GeneralTab:Button({
 })
 
 -- ===================== 範圍攻擊標籤頁 =====================
--- ===================== 範圍攻擊標籤頁 =====================
--- FlashAttackModule定義（原本的代碼保持不變）
 local FlashAttackModule = {}
 
 local Players = game:GetService("Players")
@@ -241,19 +243,22 @@ local lastScanTime = 0
 local cachedBladeHits = {}
 local lastAttackTime = 0
 
+-- Config設定 - 支援0.001秒攻擊間隔
 local Config = {
     AttackDistance = 5000,
     AttackMobs = true,
     AttackPlayers = true,
-    AttackCooldown = 0.3,
-    ComboResetTime = 0.3,
+    AttackCooldown = 0.1,  -- 預設0.1秒
+    AttackCooldownMin = 0.001,  -- 最小攻擊間隔
+    ComboResetTime = 0.05,  -- 組合重置時間
     MaxCombo = 3,
     HitboxLimbs = {"RightLowerArm", "RightUpperArm", "LeftLowerArm", "LeftUpperArm", "RightHand", "LeftHand"},
     AutoClickEnabled = true,
-    OptimizedScanInterval = 0.3
+    OptimizedScanInterval = 0.1,
+    UltraFastMode = false  -- 極速模式開關
 }
 
--- FastAttack Class（保持原本代碼）
+-- FastAttack Class
 local FastAttack = {}
 FastAttack.__index = FastAttack
 
@@ -267,7 +272,8 @@ function FastAttack.new()
         Connections = {},
         Overheat = {Dragonstorm = {MaxOverheat = 3, Cooldown = 0, TotalOverheat = 0, Distance = 350, Shooting = false}},
         ShootsPerTarget = {["Dual Flintlock"] = 2},
-        SpecialShoots = {["Skull Guitar"] = "TAP", ["Bazooka"] = "Position", ["Cannon"] = "Position", ["Dragonstorm"] = "Overheat"}
+        SpecialShoots = {["Skull Guitar"] = "TAP", ["Bazooka"] = "Position", ["Cannon"] = "Position", ["Dragonstorm"] = "Overheat"},
+        Config = Config  -- 引用全局Config
     }, FastAttack)
     
     pcall(function()
@@ -299,7 +305,13 @@ function FastAttack:CheckStun(Character, Humanoid, ToolTip)
 end
 
 function FastAttack:GetBladeHits(Character, Distance)
-    if tick() - lastScanTime < Config.OptimizedScanInterval and #cachedBladeHits > 0 then
+    -- 如果啟用極速模式，減少掃描間隔
+    local scanInterval = Config.OptimizedScanInterval
+    if Config.UltraFastMode then
+        scanInterval = 0.05
+    end
+    
+    if tick() - lastScanTime < scanInterval and #cachedBladeHits > 0 then
         return cachedBladeHits
     end
     
@@ -432,7 +444,18 @@ function FastAttack:UseFruitM1(Character, Equipped, Combo)
 end
 
 function FastAttack:Attack()
-    if not FlashAttackEnabled or (tick() - self.Debounce) < Config.AttackCooldown then return end
+    -- 使用Config中的AttackCooldown值
+    local currentCooldown = Config.AttackCooldown
+    
+    -- 確保不小於最小間隔
+    if currentCooldown < Config.AttackCooldownMin then
+        currentCooldown = Config.AttackCooldownMin
+    end
+    
+    if not FlashAttackEnabled or (tick() - self.Debounce) < currentCooldown then 
+        return 
+    end
+    
     local Character = Player.Character
     if not Character or not self:IsEntityAlive(Character) then return end
     
@@ -443,7 +466,12 @@ function FastAttack:Attack()
     local ToolTip = Equipped.ToolTip
     if not table.find({"Melee", "Blox Fruit", "Sword", "Gun"}, ToolTip) then return end
     
-    local Cooldown = Equipped:FindFirstChild("Cooldown") and Equipped.Cooldown.Value or Config.AttackCooldown
+    -- 使用動態的冷卻時間，但確保不小於最小間隔
+    local Cooldown = Equipped:FindFirstChild("Cooldown") and Equipped.Cooldown.Value or currentCooldown
+    if Cooldown < Config.AttackCooldownMin then
+        Cooldown = Config.AttackCooldownMin
+    end
+    
     if not self:CheckStun(Character, Humanoid, ToolTip) then return end
     
     local Combo = self:GetCombo()
@@ -463,7 +491,13 @@ function FastAttack:Attack()
 end
 
 local function GetBladeHits()
-    if tick() - lastScanTime < Config.OptimizedScanInterval and #cachedBladeHits > 0 then
+    -- 如果啟用極速模式，減少掃描間隔
+    local scanInterval = Config.OptimizedScanInterval
+    if Config.UltraFastMode then
+        scanInterval = 0.05
+    end
+    
+    if tick() - lastScanTime < scanInterval and #cachedBladeHits > 0 then
         return cachedBladeHits
     end
     
@@ -492,7 +526,16 @@ local function GetBladeHits()
 end
 
 local function AttackAll()
-    if not FlashAttackEnabled or tick() - lastAttackTime < 0.1 then return end
+    local currentCooldown = Config.AttackCooldown
+    
+    -- 確保不小於最小間隔
+    if currentCooldown < Config.AttackCooldownMin then
+        currentCooldown = Config.AttackCooldownMin
+    end
+    
+    if not FlashAttackEnabled or tick() - lastAttackTime < currentCooldown then 
+        return 
+    end
     lastAttackTime = tick()
     
     local character = Player.Character
@@ -520,7 +563,13 @@ end
 local Funcs = {}
 
 function GetAllBladeHits()
-    if tick() - lastScanTime < Config.OptimizedScanInterval and #cachedBladeHits > 0 then
+    -- 如果啟用極速模式，減少掃描間隔
+    local scanInterval = Config.OptimizedScanInterval
+    if Config.UltraFastMode then
+        scanInterval = 0.05
+    end
+    
+    if tick() - lastScanTime < scanInterval and #cachedBladeHits > 0 then
         return cachedBladeHits
     end
     return GetBladeHits()
@@ -544,7 +593,16 @@ function Getplayerhit()
 end
 
 function Funcs:Attack()
-    if not FlashAttackEnabled or tick() - lastAttackTime < 0.1 then return end
+    local currentCooldown = Config.AttackCooldown
+    
+    -- 確保不小於最小間隔
+    if currentCooldown < Config.AttackCooldownMin then
+        currentCooldown = Config.AttackCooldownMin
+    end
+    
+    if not FlashAttackEnabled or tick() - lastAttackTime < currentCooldown then 
+        return 
+    end
     
     local bladehits = GetAllBladeHits()
     local playerHits = Getplayerhit()
@@ -585,24 +643,50 @@ function FlashAttackModule:Start()
     
     fastAttackInstance = FastAttack.new()
     
-    attackConnection = RunService.Heartbeat:Connect(function()
-        local currentTime = tick()
+    -- 根據攻擊速度選擇合適的循環
+    if Config.AttackCooldown <= 0.01 then
+        -- 如果攻擊間隔小於0.01秒，使用RenderStepped
+        Config.UltraFastMode = true
+        print("啟用極速攻擊模式 (RenderStepped)")
         
-        if currentTime - lastAttackTime >= 0.1 then
-            if fastAttackInstance then
-                fastAttackInstance:Attack()
+        attackConnection = RunService.RenderStepped:Connect(function()
+            local currentTime = tick()
+            local attackCooldown = Config.AttackCooldown
+            
+            if currentTime - lastAttackTime >= attackCooldown then
+                if fastAttackInstance then
+                    fastAttackInstance:Attack()
+                end
+                AttackAll()
+                Funcs:Attack()
+                lastAttackTime = currentTime
             end
-            AttackAll()
-            Funcs:Attack()
-            lastAttackTime = currentTime
-        end
-    end)
+        end)
+    else
+        -- 普通速度使用Heartbeat
+        Config.UltraFastMode = false
+        print("啟用普通攻擊模式 (Heartbeat)")
+        
+        attackConnection = RunService.Heartbeat:Connect(function()
+            local currentTime = tick()
+            local attackCooldown = Config.AttackCooldown
+            
+            if currentTime - lastAttackTime >= attackCooldown then
+                if fastAttackInstance then
+                    fastAttackInstance:Attack()
+                end
+                AttackAll()
+                Funcs:Attack()
+                lastAttackTime = currentTime
+            end
+        end)
+    end
     
     print("========================================")
-    print("Flash Attack 已开启")
-    print("攻击距离: " .. Config.AttackDistance)
-    print("攻击怪物: " .. (Config.AttackMobs and "开启" or "关闭"))
-    print("攻击玩家: " .. (Config.AttackPlayers and "开启" or "关闭"))
+    print("Flash Attack 已開啟")
+    print("攻擊冷卻: " .. Config.AttackCooldown .. "秒")
+    print("攻擊頻率: " .. (1 / Config.AttackCooldown) .. "次/秒")
+    print("模式: " .. (Config.UltraFastMode and "極速(RenderStepped)" or "普通(Heartbeat)"))
     print("========================================")
 end
 
@@ -626,7 +710,7 @@ function FlashAttackModule:Stop()
     cachedBladeHits = {}
     
     print("========================================")
-    print("Flash Attack 已关闭")
+    print("Flash Attack 已關閉")
     print("========================================")
 end
 
@@ -653,8 +737,24 @@ function FlashAttackModule:SetConfig(key, value)
         Config.AttackPlayers = value
         print("攻擊玩家更新: " .. (value and "開啟" or "關閉"))
     elseif key == "AttackCooldown" then
+        -- 確保不小於最小間隔
+        if value < Config.AttackCooldownMin then
+            value = Config.AttackCooldownMin
+            print("警告：攻擊間隔已調整為最小值" .. Config.AttackCooldownMin .. "秒")
+        end
         Config.AttackCooldown = value
-        print("攻擊冷卻更新: " .. value .. "秒")
+        print("攻擊冷卻更新: " .. value .. "秒 (" .. (1/value) .. "次/秒)")
+        
+        -- 如果正在運行且速度改變，重新調整模式
+        if FlashAttackEnabled and attackConnection then
+            local isUltraFast = value <= 0.01
+            if Config.UltraFastMode ~= isUltraFast then
+                print("攻擊速度改變，重新啟動攻擊循環...")
+                self:Stop()
+                task.wait(0.05)
+                self:Start()
+            end
+        end
     end
 end
 
@@ -669,19 +769,15 @@ task.wait(3)
 -- 自动開啟Flash Attack
 FlashAttackModule:Start()
 
--- 创建一个简单的控制命令
+-- 创建控制命令
 local function createCommands()
-    -- 创建一个简单的控制台命令系统
     print("\n可用命令:")
     print("/flash on - 开启Flash Attack")
     print("/flash off - 关闭Flash Attack")
     print("/flash status - 查看状态")
-    print("/flash distance <数值> - 设置攻击距离")
-    print("/flash mobs <on/off> - 开启/关闭攻击怪物")
-    print("/flash players <on/off> - 开启/关闭攻击玩家")
+    print("/flash speed <数值> - 设置攻击速度 (0.001-1秒)")
     print("========================================")
     
-    -- 监听聊天输入（简单版本）
     game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
         msg = msg:lower()
         
@@ -691,48 +787,24 @@ local function createCommands()
             FlashAttackModule:Stop()
         elseif msg == "/flash status" then
             print("当前状态: " .. (FlashAttackModule:IsEnabled() and "已开启" or "已关闭"))
+            print("攻击冷却: " .. Config.AttackCooldown .. "秒")
+            print("攻击频率: " .. (1 / Config.AttackCooldown) .. "次/秒")
             print("攻击距离: " .. Config.AttackDistance)
-            print("攻击怪物: " .. (Config.AttackMobs and "开启" or "关闭"))
-            print("攻击玩家: " .. (Config.AttackPlayers and "开启" or "关闭"))
-        elseif msg:find("/flash distance") then
-            local distance = tonumber(msg:match("/flash distance%s+(%d+)"))
-            if distance and distance >= 100 and distance <= 10000 then
-                Config.AttackDistance = distance
-                print("攻击距离已设置为: " .. distance)
+        elseif msg:find("/flash speed") then
+            local speed = tonumber(msg:match("/flash speed%s+(%d*%.?%d+)"))
+            if speed and speed >= 0.001 and speed <= 1 then
+                FlashAttackModule:SetConfig("AttackCooldown", speed)
+                print("攻击速度已设置为: " .. speed .. "秒 (" .. (1/speed) .. "次/秒)")
             else
-                print("请输入有效的距离 (100-10000)")
+                print("请输入有效的攻击速度 (0.001-1秒)")
             end
-        elseif msg:find("/flash mobs") then
-            local state = msg:match("/flash mobs%s+(%a+)")
-            if state == "on" then
-                Config.AttackMobs = true
-                print("攻击怪物: 开启")
-            elseif state == "off" then
-                Config.AttackMobs = false
-                print("攻击怪物: 关闭")
-            end
-        elseif msg:find("/flash players") then
-            local state = msg:match("/flash players%s+(%a+)")
-            if state == "on" then
-                Config.AttackPlayers = true
-                print("攻击玩家: 开启")
-            elseif state == "off" then
-                Config.AttackPlayers = false
-                print("攻击玩家: 关闭")
-            end
-        elseif msg == "/help" then
-            print("\n可用命令:")
-            print("/flash on - 开启Flash Attack")
-            print("/flash off - 关闭Flash Attack")
-            print("/flash status - 查看状态")
-            print("/flash distance <数值> - 设置攻击距离")
-            print("/flash mobs <on/off> - 开启/关闭攻击怪物")
-            print("/flash players <on/off> - 开启/关闭攻击玩家")
         end
     end)
 end
 
--- 現在添加UI控制部分（只添加這部分，其他保持不變）
+createCommands()
+
+-- 現在添加UI控制部分
 -- 主開關
 Tabs.AttackTab:Toggle({
     Title = "範圍攻擊開關",
@@ -758,6 +830,39 @@ Tabs.AttackTab:Toggle({
 
 Tabs.AttackTab:Divider()
 
+-- 攻擊速度調整 - 支援0.001秒
+Tabs.AttackTab:Slider({
+    Title = "攻擊速度 (0.001-1秒)",
+    Desc = "調整攻擊間隔時間",
+    Value = { Min = 1, Max = 1000, Default = 10 },  -- 1-1000次/秒，對應1-0.001秒
+    Callback = function(value)
+        -- 計算攻擊間隔時間
+        local cooldown = 1 / value
+        
+        -- 確保最小不小於0.001秒
+        if cooldown < 0.001 then
+            cooldown = 0.001
+            value = 1000
+        end
+        
+        -- 更新Config設定
+        Config.AttackCooldown = cooldown
+        
+        -- 更新FlashAttackModule設定
+        if FlashAttackModule:IsEnabled() then
+            FlashAttackModule:SetConfig("AttackCooldown", cooldown)
+        end
+        
+        WindUI:Notify({ 
+            Title = "攻擊速度", 
+            Content = string.format("已設置為: %.3f秒/次 (每秒%d次)", cooldown, value), 
+            Duration = 2 
+        })
+        
+        print(string.format("攻擊速度設定: %.3f秒/次, %.0f次/秒", cooldown, value))
+    end
+})
+
 -- 攻擊範圍調整
 Tabs.AttackTab:Slider({
     Title = "攻擊範圍",
@@ -775,22 +880,49 @@ Tabs.AttackTab:Slider({
     end
 })
 
--- 攻擊速度調整
-Tabs.AttackTab:Slider({
-    Title = "攻擊速度",
-    Value = { Min = 1, Max = 30, Default = 10 },
-    Callback = function(value)
-        local cooldown = 1 / value
-        Config.AttackCooldown = cooldown
+Tabs.AttackTab:Divider()
+
+-- 極速模式開關
+Tabs.AttackTab:Toggle({
+    Title = "啟用極速模式",
+    Desc = "支援0.001秒攻擊間隔",
+    Value = false,
+    Callback = function(state)
+        Config.UltraFastMode = state
         
+        -- 如果正在運行，重新啟動以應用新設定
         if FlashAttackModule:IsEnabled() then
-            FlashAttackModule:SetConfig("AttackCooldown", cooldown)
+            FlashAttackModule:Stop()
+            task.wait(0.1)
+            FlashAttackModule:Start()
         end
         
         WindUI:Notify({ 
-            Title = "攻擊速度", 
-            Content = string.format("已設置為: %d次/秒", value), 
+            Title = "極速模式", 
+            Content = state and "已啟用 (支援0.001秒)" or "已關閉", 
             Duration = 2 
+        })
+    end
+})
+
+-- 快速設定按鈕
+Tabs.AttackTab:Button({
+    Title = "設定為0.001秒攻擊",
+    Desc = "每秒1000次攻擊",
+    Callback = function()
+        Config.AttackCooldown = 0.001
+        Config.UltraFastMode = true
+        
+        if FlashAttackModule:IsEnabled() then
+            FlashAttackModule:Stop()
+            task.wait(0.1)
+            FlashAttackModule:Start()
+        end
+        
+        WindUI:Notify({ 
+            Title = "攻擊速度設定", 
+            Content = "已設定為0.001秒間隔 (每秒1000次)", 
+            Duration = 3 
         })
     end
 })
@@ -832,7 +964,7 @@ Tabs.AttackTab:Toggle({
 
 Tabs.AttackTab:Divider()
 
--- 自動V4（原本的代碼）
+-- 自動V4
 local autoV4Task = nil
 local function callAwakeningRemote()
     local character = LocalPlayer.Character
@@ -874,7 +1006,7 @@ Tabs.AttackTab:Toggle({
     end
 })
 
--- 自動V3（原本的代碼）
+-- 自動V3
 local autoV3Task = nil
 local function callRaceV3Remote()
     local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -912,10 +1044,29 @@ Tabs.AttackTab:Toggle({
 
 Tabs.AttackTab:Divider()
 
--- 自動武裝色（原本的代碼）
+-- 自動武裝色
+local AutoHakiEnabled = false
+local autoHakiTask = nil
+
+local function startAutoHakiLoop()
+    if autoHakiTask then
+        task.cancel(autoHakiTask)
+        autoHakiTask = nil
+    end
+    autoHakiTask = task.spawn(function()
+        while AutoHakiEnabled do
+            pcall(function()
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
+            end)
+            task.wait(1)
+        end
+        autoHakiTask = nil
+    end)
+end
+
 Tabs.AttackTab:Toggle({
     Title = "自動武裝色",
-    Value = true,
+    Value = false,
     Callback = function(state)
         AutoHakiEnabled = state
         if state then
