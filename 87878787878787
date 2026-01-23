@@ -946,43 +946,7 @@ Tabs.AttackTab:Toggle({
 
 Tabs.AttackTab:Divider()
 
--- 自動武裝色
-local AutoHakiEnabled = false
-local autoHakiTask = nil
 
-local function startAutoHakiLoop()
-    if autoHakiTask then
-        task.cancel(autoHakiTask)
-        autoHakiTask = nil
-    end
-    autoHakiTask = task.spawn(function()
-        while AutoHakiEnabled do
-            pcall(function()
-                ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
-            end)
-            task.wait(1)
-        end
-        autoHakiTask = nil
-    end)
-end
-
-Tabs.AttackTab:Toggle({
-    Title = "自動武裝色",
-    Value = false,
-    Callback = function(state)
-        AutoHakiEnabled = state
-        if state then
-            startAutoHakiLoop()
-            WindUI:Notify({ Title = "自動武裝色", Content = "已開啟", Duration = 2 })
-        else
-            if autoHakiTask then
-                task.cancel(autoHakiTask)
-                autoHakiTask = nil
-            end
-            WindUI:Notify({ Title = "自動武裝色", Content = "已關閉", Duration = 2 })
-        end
-    end
-})
 
 -- ===================== ESP透視標籤頁 =====================
 local espEnabled = false
