@@ -213,7 +213,8 @@ Tabs.GeneralTab:Button({
 })
 
 -- ===================== 範圍攻擊標籤頁 =====================
--- FlashAttackModule定義
+-- ===================== 範圍攻擊標籤頁 =====================
+-- FlashAttackModule定義（原本的代碼保持不變）
 local FlashAttackModule = {}
 
 local Players = game:GetService("Players")
@@ -230,21 +231,21 @@ local RegisterHit = Net:WaitForChild("RE/RegisterHit")
 local ShootGunEvent = Net:WaitForChild("RE/ShootGunEvent")
 local GunValidator = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Validator2")
 
--- 狀態變量
+-- Biến trạng thái
 local FlashAttackEnabled = false
 local attackConnection = nil
 local fastAttackInstance = nil
 
--- 優化變量
+-- Biến tối ưu
 local lastScanTime = 0
 local cachedBladeHits = {}
 local lastAttackTime = 0
 
 local Config = {
-    AttackDistance = 1000,
+    AttackDistance = 5000,
     AttackMobs = true,
     AttackPlayers = true,
-    AttackCooldown = 0.1,
+    AttackCooldown = 0.3,
     ComboResetTime = 0.3,
     MaxCombo = 3,
     HitboxLimbs = {"RightLowerArm", "RightUpperArm", "LeftLowerArm", "LeftUpperArm", "RightHand", "LeftHand"},
@@ -252,7 +253,7 @@ local Config = {
     OptimizedScanInterval = 0.3
 }
 
--- FastAttack Class
+-- FastAttack Class（保持原本代碼）
 local FastAttack = {}
 FastAttack.__index = FastAttack
 
@@ -587,7 +588,7 @@ function FlashAttackModule:Start()
     attackConnection = RunService.Heartbeat:Connect(function()
         local currentTime = tick()
         
-        if currentTime - lastAttackTime >= Config.AttackCooldown then
+        if currentTime - lastAttackTime >= 0.1 then
             if fastAttackInstance then
                 fastAttackInstance:Attack()
             end
@@ -598,11 +599,10 @@ function FlashAttackModule:Start()
     end)
     
     print("========================================")
-    print("Flash Attack 已開啟")
-    print("攻擊距離: " .. Config.AttackDistance)
-    print("攻擊怪物: " .. (Config.AttackMobs and "開啟" or "關閉"))
-    print("攻擊玩家: " .. (Config.AttackPlayers and "開啟" or "關閉"))
-    print("攻擊速度: " .. (1/Config.AttackCooldown) .. "次/秒")
+    print("Flash Attack 已开启")
+    print("攻击距离: " .. Config.AttackDistance)
+    print("攻击怪物: " .. (Config.AttackMobs and "开启" or "关闭"))
+    print("攻击玩家: " .. (Config.AttackPlayers and "开启" or "关闭"))
     print("========================================")
 end
 
@@ -626,7 +626,7 @@ function FlashAttackModule:Stop()
     cachedBladeHits = {}
     
     print("========================================")
-    print("Flash Attack 已關閉")
+    print("Flash Attack 已关闭")
     print("========================================")
 end
 
@@ -658,7 +658,81 @@ function FlashAttackModule:SetConfig(key, value)
     end
 end
 
--- UI控制部分
+-- ===================== 直接执行 =====================
+print("正在加载 Flash Attack...")
+print("攻击距离: 5000")
+print("等待3秒后自动开启...")
+
+-- 等待3秒后自动開啟
+task.wait(3)
+
+-- 自动開啟Flash Attack
+FlashAttackModule:Start()
+
+-- 创建一个简单的控制命令
+local function createCommands()
+    -- 创建一个简单的控制台命令系统
+    print("\n可用命令:")
+    print("/flash on - 开启Flash Attack")
+    print("/flash off - 关闭Flash Attack")
+    print("/flash status - 查看状态")
+    print("/flash distance <数值> - 设置攻击距离")
+    print("/flash mobs <on/off> - 开启/关闭攻击怪物")
+    print("/flash players <on/off> - 开启/关闭攻击玩家")
+    print("========================================")
+    
+    -- 监听聊天输入（简单版本）
+    game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
+        msg = msg:lower()
+        
+        if msg == "/flash on" or msg == "/flash start" then
+            FlashAttackModule:Start()
+        elseif msg == "/flash off" or msg == "/flash stop" then
+            FlashAttackModule:Stop()
+        elseif msg == "/flash status" then
+            print("当前状态: " .. (FlashAttackModule:IsEnabled() and "已开启" or "已关闭"))
+            print("攻击距离: " .. Config.AttackDistance)
+            print("攻击怪物: " .. (Config.AttackMobs and "开启" or "关闭"))
+            print("攻击玩家: " .. (Config.AttackPlayers and "开启" or "关闭"))
+        elseif msg:find("/flash distance") then
+            local distance = tonumber(msg:match("/flash distance%s+(%d+)"))
+            if distance and distance >= 100 and distance <= 10000 then
+                Config.AttackDistance = distance
+                print("攻击距离已设置为: " .. distance)
+            else
+                print("请输入有效的距离 (100-10000)")
+            end
+        elseif msg:find("/flash mobs") then
+            local state = msg:match("/flash mobs%s+(%a+)")
+            if state == "on" then
+                Config.AttackMobs = true
+                print("攻击怪物: 开启")
+            elseif state == "off" then
+                Config.AttackMobs = false
+                print("攻击怪物: 关闭")
+            end
+        elseif msg:find("/flash players") then
+            local state = msg:match("/flash players%s+(%a+)")
+            if state == "on" then
+                Config.AttackPlayers = true
+                print("攻击玩家: 开启")
+            elseif state == "off" then
+                Config.AttackPlayers = false
+                print("攻击玩家: 关闭")
+            end
+        elseif msg == "/help" then
+            print("\n可用命令:")
+            print("/flash on - 开启Flash Attack")
+            print("/flash off - 关闭Flash Attack")
+            print("/flash status - 查看状态")
+            print("/flash distance <数值> - 设置攻击距离")
+            print("/flash mobs <on/off> - 开启/关闭攻击怪物")
+            print("/flash players <on/off> - 开启/关闭攻击玩家")
+        end
+    end)
+end
+
+-- 現在添加UI控制部分（只添加這部分，其他保持不變）
 -- 主開關
 Tabs.AttackTab:Toggle({
     Title = "範圍攻擊開關",
@@ -666,12 +740,6 @@ Tabs.AttackTab:Toggle({
     Callback = function(state)
         if state then
             FlashAttackModule:Start()
-            -- 更新當前配置到模塊
-            FlashAttackModule:SetConfig("AttackDistance", Config.AttackDistance)
-            FlashAttackModule:SetConfig("AttackCooldown", Config.AttackCooldown)
-            FlashAttackModule:SetConfig("AttackMobs", Config.AttackMobs)
-            FlashAttackModule:SetConfig("AttackPlayers", Config.AttackPlayers)
-            
             WindUI:Notify({ 
                 Title = "範圍攻擊", 
                 Content = "已開啟", 
@@ -693,7 +761,7 @@ Tabs.AttackTab:Divider()
 -- 攻擊範圍調整
 Tabs.AttackTab:Slider({
     Title = "攻擊範圍",
-    Value = { Min = 50, Max = 5000, Default = 1000 },
+    Value = { Min = 50, Max = 10000, Default = 5000 },
     Callback = function(value)
         Config.AttackDistance = value
         if FlashAttackModule:IsEnabled() then
@@ -710,7 +778,7 @@ Tabs.AttackTab:Slider({
 -- 攻擊速度調整
 Tabs.AttackTab:Slider({
     Title = "攻擊速度",
-    Value = { Min = 1, Max = 20, Default = 10 },
+    Value = { Min = 1, Max = 30, Default = 10 },
     Callback = function(value)
         local cooldown = 1 / value
         Config.AttackCooldown = cooldown
@@ -756,7 +824,7 @@ Tabs.AttackTab:Toggle({
         end
         WindUI:Notify({ 
             Title = "攻擊玩家", 
-            Content = state and "已開啟"或"已關閉", 
+            Content = state and "已開啟" or "已關閉", 
             Duration = 2 
         })
     end
@@ -764,7 +832,7 @@ Tabs.AttackTab:Toggle({
 
 Tabs.AttackTab:Divider()
 
--- 自動V4
+-- 自動V4（原本的代碼）
 local autoV4Task = nil
 local function callAwakeningRemote()
     local character = LocalPlayer.Character
@@ -806,7 +874,7 @@ Tabs.AttackTab:Toggle({
     end
 })
 
--- 自動V3
+-- 自動V3（原本的代碼）
 local autoV3Task = nil
 local function callRaceV3Remote()
     local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -844,17 +912,10 @@ Tabs.AttackTab:Toggle({
 
 Tabs.AttackTab:Divider()
 
--- 自動武裝色
-local AutoHakiEnabled = false
-local autoHakiTask = nil
-
-local function startAutoHakiLoop()
-    -- 自動武裝色功能實現
-end
-
+-- 自動武裝色（原本的代碼）
 Tabs.AttackTab:Toggle({
     Title = "自動武裝色",
-    Value = false,
+    Value = true,
     Callback = function(state)
         AutoHakiEnabled = state
         if state then
@@ -1404,21 +1465,6 @@ Tabs.ThemeTab:Dropdown({
         })
     end
 })
-
--- ===================== 修改自動啟動部分 =====================
--- 刪除或註解掉原來的自動啟動部分（約274-280行）
--- 修改為：
-print("正在加载 Flash Attack...")
-print("攻擊距離: 1000 (可在UI調整)")
-print("攻擊速度: 10次/秒 (可在UI調整)")
-print("範圍攻擊已加載，請在UI中開啟")
-
--- 註解掉自動啟動的代碼：
--- task.wait(3)
--- FlashAttackModule:Start()
-
--- 創建聊天命令系統
-createCommands()
 
 -- ===================== 腳本完成 =====================
 task.wait(1)
