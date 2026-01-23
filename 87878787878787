@@ -180,6 +180,28 @@ Tabs.GeneralTab:Button({
 })
 
 Tabs.GeneralTab:Button({
+    Title = "追蹤",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "追蹤", Content = "正在加載追蹤腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E8%BF%BD"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "地下城",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "地下城", Content = "正在加載地下城腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%9C%B0%E4%B8%8B"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
     Title = "減畫質",
     Icon = "monitor",
     Callback = function()
