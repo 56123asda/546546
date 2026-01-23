@@ -267,7 +267,8 @@ function FastAttack.new()
         Connections = {},
         Overheat = {Dragonstorm = {MaxOverheat = 3, Cooldown = 0, TotalOverheat = 0, Distance = 350, Shooting = false}},
         ShootsPerTarget = {["Dual Flintlock"] = 2},
-        SpecialShoots = {["Skull Guitar"] = "TAP", ["Bazooka"] = "Position", ["Cannon"] = "Position", ["Dragonstorm"] = "Overheat"}
+        SpecialShoots = {["Skull Guitar"] = "TAP", ["Bazooka"] = "Position", ["Cannon"] = "Position", ["Dragonstorm"] = "Overheat"},
+        Config = Config  -- 儲存Config參考
     }, FastAttack)
     
     pcall(function()
@@ -308,6 +309,7 @@ function FastAttack:GetBladeHits(Character, Distance)
     Distance = Distance or Config.AttackDistance
     
     local function ProcessTargets(Folder, CanAttack)
+        if not CanAttack then return end
         for _, Enemy in ipairs(Folder:GetChildren()) do
             if Enemy ~= Character and self:IsEntityAlive(Enemy) then
                 local BasePart = Enemy:FindFirstChild("HumanoidRootPart")
@@ -322,8 +324,8 @@ function FastAttack:GetBladeHits(Character, Distance)
         end
     end
     
-    if Config.AttackMobs then ProcessTargets(Workspace.Enemies) end
-    if Config.AttackPlayers then ProcessTargets(Workspace.Characters, true) end
+    ProcessTargets(Workspace.Enemies, Config.AttackMobs)
+    ProcessTargets(Workspace.Characters, Config.AttackPlayers)
     
     lastScanTime = tick()
     cachedBladeHits = BladeHits
@@ -472,7 +474,8 @@ local function GetBladeHits()
     
     if not playerPos then return targets end
     
-    local function ProcessFolder(folder)
+    local function ProcessFolder(folder, shouldAttack)
+        if not shouldAttack then return end
         for _, v in pairs(folder:GetChildren()) do
             if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
                 local distance = (v.HumanoidRootPart.Position - playerPos).Magnitude
@@ -483,8 +486,8 @@ local function GetBladeHits()
         end
     end
     
-    if Config.AttackMobs then ProcessFolder(Workspace.Enemies) end
-    if Config.AttackPlayers then ProcessFolder(Workspace.Characters) end
+    ProcessFolder(Workspace.Enemies, Config.AttackMobs)
+    ProcessFolder(Workspace.Characters, Config.AttackPlayers)
     
     lastScanTime = tick()
     cachedBladeHits = targets
@@ -530,7 +533,7 @@ function Getplayerhit()
     local bladehits = {}
     local playerPos = Player.Character and Player.Character:GetPivot().Position
     
-    if not playerPos then return bladehits end
+    if not playerPos or not Config.AttackPlayers then return bladehits end
     
     for _, v in pairs(Workspace.Characters:GetChildren()) do
         if v.Name ~= Player.Name and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
@@ -585,6 +588,11 @@ function FlashAttackModule:Start()
     
     fastAttackInstance = FastAttack.new()
     
+    -- 確保Config被應用
+    if fastAttackInstance then
+        fastAttackInstance.Config = Config
+    end
+    
     attackConnection = RunService.Heartbeat:Connect(function()
         local currentTime = tick()
         
@@ -603,6 +611,7 @@ function FlashAttackModule:Start()
     print("攻击距离: " .. Config.AttackDistance)
     print("攻击怪物: " .. (Config.AttackMobs and "开启" or "关闭"))
     print("攻击玩家: " .. (Config.AttackPlayers and "开启" or "关闭"))
+    print("攻击冷却: " .. Config.AttackCooldown .. "秒")
     print("========================================")
 end
 
@@ -656,6 +665,11 @@ function FlashAttackModule:SetConfig(key, value)
         Config.AttackCooldown = value
         print("攻擊冷卻更新: " .. value .. "秒")
     end
+    
+    -- 立即應用設定到FastAttack實例
+    if fastAttackInstance then
+        fastAttackInstance.Config = Config
+    end
 end
 
 -- ===================== 直接执行 =====================
@@ -671,7 +685,6 @@ FlashAttackModule:Start()
 
 -- 创建一个简单的控制命令
 local function createCommands()
-    -- 创建一个简单的控制台命令系统
     print("\n可用命令:")
     print("/flash on - 开启Flash Attack")
     print("/flash off - 关闭Flash Attack")
@@ -681,7 +694,6 @@ local function createCommands()
     print("/flash players <on/off> - 开启/关闭攻击玩家")
     print("========================================")
     
-    -- 监听聊天输入（简单版本）
     game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
         msg = msg:lower()
         
@@ -697,7 +709,7 @@ local function createCommands()
         elseif msg:find("/flash distance") then
             local distance = tonumber(msg:match("/flash distance%s+(%d+)"))
             if distance and distance >= 100 and distance <= 10000 then
-                Config.AttackDistance = distance
+                FlashAttackModule:SetConfig("AttackDistance", distance)
                 print("攻击距离已设置为: " .. distance)
             else
                 print("请输入有效的距离 (100-10000)")
@@ -705,32 +717,26 @@ local function createCommands()
         elseif msg:find("/flash mobs") then
             local state = msg:match("/flash mobs%s+(%a+)")
             if state == "on" then
-                Config.AttackMobs = true
+                FlashAttackModule:SetConfig("AttackMobs", true)
                 print("攻击怪物: 开启")
             elseif state == "off" then
-                Config.AttackMobs = false
+                FlashAttackModule:SetConfig("AttackMobs", false)
                 print("攻击怪物: 关闭")
             end
         elseif msg:find("/flash players") then
             local state = msg:match("/flash players%s+(%a+)")
             if state == "on" then
-                Config.AttackPlayers = true
+                FlashAttackModule:SetConfig("AttackPlayers", true)
                 print("攻击玩家: 开启")
             elseif state == "off" then
-                Config.AttackPlayers = false
+                FlashAttackModule:SetConfig("AttackPlayers", false)
                 print("攻击玩家: 关闭")
             end
-        elseif msg == "/help" then
-            print("\n可用命令:")
-            print("/flash on - 开启Flash Attack")
-            print("/flash off - 关闭Flash Attack")
-            print("/flash status - 查看状态")
-            print("/flash distance <数值> - 设置攻击距离")
-            print("/flash mobs <on/off> - 开启/关闭攻击怪物")
-            print("/flash players <on/off> - 开启/关闭攻击玩家")
         end
     end)
 end
+
+createCommands()
 
 -- 現在添加UI控制部分
 -- 主開關
@@ -739,6 +745,10 @@ Tabs.AttackTab:Toggle({
     Value = false,
     Callback = function(state)
         if state then
+            -- 確保Config設定被應用
+            if fastAttackInstance then
+                fastAttackInstance.Config = Config
+            end
             FlashAttackModule:Start()
             WindUI:Notify({ 
                 Title = "範圍攻擊", 
@@ -764,9 +774,10 @@ Tabs.AttackTab:Slider({
     Value = { Min = 50, Max = 10000, Default = 5000 },
     Callback = function(value)
         Config.AttackDistance = value
-        if FlashAttackModule:IsEnabled() then
-            FlashAttackModule:SetConfig("AttackDistance", value)
-        end
+        
+        -- 立即更新FlashAttackModule的設定
+        FlashAttackModule:SetConfig("AttackDistance", value)
+        
         WindUI:Notify({ 
             Title = "攻擊範圍", 
             Content = "已設置為: " .. value, 
@@ -783,9 +794,8 @@ Tabs.AttackTab:Slider({
         local cooldown = 1 / value
         Config.AttackCooldown = cooldown
         
-        if FlashAttackModule:IsEnabled() then
-            FlashAttackModule:SetConfig("AttackCooldown", cooldown)
-        end
+        -- 立即更新FlashAttackModule的設定
+        FlashAttackModule:SetConfig("AttackCooldown", cooldown)
         
         WindUI:Notify({ 
             Title = "攻擊速度", 
@@ -803,9 +813,10 @@ Tabs.AttackTab:Toggle({
     Value = true,
     Callback = function(state)
         Config.AttackMobs = state
-        if FlashAttackModule:IsEnabled() then
-            FlashAttackModule:SetConfig("AttackMobs", state)
-        end
+        
+        -- 立即更新到FlashAttackModule
+        FlashAttackModule:SetConfig("AttackMobs", state)
+        
         WindUI:Notify({ 
             Title = "攻擊NPC", 
             Content = state and "已開啟" or "已關閉", 
@@ -819,9 +830,10 @@ Tabs.AttackTab:Toggle({
     Value = true,
     Callback = function(state)
         Config.AttackPlayers = state
-        if FlashAttackModule:IsEnabled() then
-            FlashAttackModule:SetConfig("AttackPlayers", state)
-        end
+        
+        -- 立即更新到FlashAttackModule
+        FlashAttackModule:SetConfig("AttackPlayers", state)
+        
         WindUI:Notify({ 
             Title = "攻擊玩家", 
             Content = state and "已開啟" or "已關閉", 
@@ -913,9 +925,28 @@ Tabs.AttackTab:Toggle({
 Tabs.AttackTab:Divider()
 
 -- 自動武裝色
+local AutoHakiEnabled = false
+local autoHakiTask = nil
+
+local function startAutoHakiLoop()
+    if autoHakiTask then
+        task.cancel(autoHakiTask)
+        autoHakiTask = nil
+    end
+    autoHakiTask = task.spawn(function()
+        while AutoHakiEnabled do
+            pcall(function()
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
+            end)
+            task.wait(1)
+        end
+        autoHakiTask = nil
+    end)
+end
+
 Tabs.AttackTab:Toggle({
     Title = "自動武裝色",
-    Value = true,
+    Value = false,
     Callback = function(state)
         AutoHakiEnabled = state
         if state then
