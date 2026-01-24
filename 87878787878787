@@ -760,6 +760,37 @@ end
 
 createCommands()
 
+-- ===================== 自動武裝色功能（從第二個腳本套用）=====================
+local AutoHakiEnabled = false
+local autoHakiTask = nil
+
+-- Auto Haki函數
+local function startAutoHakiLoop()
+    if autoHakiTask then
+        task.cancel(autoHakiTask)
+        autoHakiTask = nil
+    end
+    autoHakiTask = task.spawn(function()
+        while AutoHakiEnabled do
+            task.wait(0.2)
+            if AutoHakiEnabled and LocalPlayer.Character and not LocalPlayer.Character:FindFirstChild("HasBuso") then
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
+                end)
+            end
+        end
+        autoHakiTask = nil
+    end)
+end
+
+-- 角色添加事件
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    if AutoHakiEnabled then
+        task.wait(2)
+        startAutoHakiLoop()
+    end
+end)
+
 -- 現在添加UI控制部分
 -- 主開關
 Tabs.AttackTab:Toggle({
@@ -946,7 +977,7 @@ Tabs.AttackTab:Toggle({
 
 Tabs.AttackTab:Divider()
 
--- 自動武裝色
+-- 自動武裝色（使用新套用的功能）
 Tabs.AttackTab:Toggle({
     Title = "自動武裝色",
     Value = true,
@@ -964,7 +995,6 @@ Tabs.AttackTab:Toggle({
         end
     end
 })
-
 
 -- ===================== ESP透視標籤頁 =====================
 local espEnabled = false
@@ -1367,11 +1397,11 @@ Tabs.ActivityTab:Button({
 })
 
 Tabs.ActivityTab:Button({
-    Title = "果實m1",
+    Title = "秒殺(海)",
     Callback = function()
         WindUI:Notify({ Title = "New Attack", Content = "正在加載腳本...", Duration = 3 })
         pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E6%9E%9C%E5%AF%A61m"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E7%A7%92%E6%AE%BA%E6%B5%B7"))()
         end)
     end
 })
