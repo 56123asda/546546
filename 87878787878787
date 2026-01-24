@@ -1356,11 +1356,11 @@ end)
 Tabs.ActivityTab:Divider()
 
 Tabs.ActivityTab:Button({
-    Title = "aimbot",
+    Title = "pvp",
     Callback = function()
         WindUI:Notify({ Title = "Aim Skill", Content = "正在加載腳本...", Duration = 3 })
         pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/aimbot"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E6%9C%89%E7%94%A8%E8%87%AA%E8%8B%97"))()
         end)
     end
 })
