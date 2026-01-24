@@ -1,87 +1,543 @@
 local player = game.Players.LocalPlayer
 
--- HumanoidRootPartを取得する関数
+-- 取得HumanoidRootPart的函數
 local function getHumanoidRootPart()
-    local character = player.Character or player.CharacterAdded:Wait()
-    return character:FindFirstChild("HumanoidRootPart")
+    local character = player.Character
+    if not character then
+        character = player.CharacterAdded:Wait()
+    end
+    
+    local hrp = character:WaitForChild("HumanoidRootPart", 5)
+    return hrp
 end
 
--- Lavaを1秒ごとに削除するループ
+-- 移除岩漿函數
 local function removeLava()
     while true do
-        local map = game.Workspace:FindFirstChild("Map")
-        if map then
+        task.wait(1)
+        
+        pcall(function()
+            local map = workspace:FindFirstChild("Map")
+            if not map then return end
+            
             local ghostShipInterior = map:FindFirstChild("GhostShipInterior")
-            if ghostShipInterior then
-                local lavaParts = ghostShipInterior:FindFirstChild("LavaParts")
-                if lavaParts then
-                    local lava = lavaParts:FindFirstChild("Lava")
-                    if lava then
-                        lava:Destroy()
-                        print("Lava を削除しました。")
-                    end
-                end
+            if not ghostShipInterior then return end
+            
+            local lavaParts = ghostShipInterior:FindFirstChild("LavaParts")
+            if not lavaParts then return end
+            
+            local lava = lavaParts:FindFirstChild("Lava")
+            if lava then
+                lava:Destroy()
+                print("Lava を削除しました。")
+            end
+        end)
+    end
+end
+
+-- 安全傳送函數
+local function safeTeleport(cframe, locationName)
+    pcall(function()
+        local hrp = getHumanoidRootPart()
+        if hrp then
+            hrp.CFrame = cframe
+            print("テレポート：" .. locationName)
+        end
+    end)
+end
+
+-- 創建帶有真正關閉功能的GUI
+local function createTeleportGUIWithRealClose()
+    -- 移除現有GUI
+    local existingGui = player.PlayerGui:FindFirstChild("TeleportGui")
+    if existingGui then
+        existingGui:Destroy()
+    end
+    
+    -- 創建ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "TeleportGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+    
+    -- 創建主框架
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 180, 0, 150)
+    mainFrame.Position = UDim2.new(0, 10, 0, 10)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    mainFrame.BackgroundTransparency = 0.1
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    
+    -- 標題欄
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 25)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    titleBar.Parent = mainFrame
+    
+    -- 標題文字
+    local titleText = Instance.new("TextLabel")
+    titleText.Size = UDim2.new(1, -60, 1, 0)
+    titleText.Position = UDim2.new(0, 5, 0, 0)
+    titleText.BackgroundTransparency = 1
+    titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleText.Text = "テレポート"
+    titleText.Font = Enum.Font.SourceSansBold
+    titleText.TextSize = 14
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Parent = titleBar
+    
+    -- 縮小按鈕
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Name = "MinimizeButton"
+    minimizeButton.Size = UDim2.new(0, 20, 0, 20)
+    minimizeButton.Position = UDim2.new(1, -50, 0, 2)
+    minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+    minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minimizeButton.Text = "─"
+    minimizeButton.Font = Enum.Font.SourceSansBold
+    minimizeButton.TextSize = 16
+    minimizeButton.Parent = titleBar
+    
+    -- 關閉按鈕（真正的關閉）
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Position = UDim2.new(1, -25, 0, 2)
+    closeButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.Text = "×"
+    closeButton.Font = Enum.Font.SourceSansBold
+    closeButton.TextSize = 16
+    closeButton.Parent = titleBar
+    
+    -- 內容區域
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "ContentFrame"
+    contentFrame.Size = UDim2.new(1, -10, 1, -35)
+    contentFrame.Position = UDim2.new(0, 5, 0, 30)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = mainFrame
+    
+    -- 幽靈船按鈕
+    local ghostButton = Instance.new("TextButton")
+    ghostButton.Size = UDim2.new(1, 0, 0, 40)
+    ghostButton.Position = UDim2.new(0, 0, 0, 0)
+    ghostButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    ghostButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ghostButton.Text = "ゆうれい船"
+    ghostButton.Font = Enum.Font.SourceSansBold
+    ghostButton.TextSize = 16
+    ghostButton.Parent = contentFrame
+    
+    ghostButton.MouseButton1Click:Connect(function()
+        safeTeleport(CFrame.new(938, 249, 32888), "ゆうれい船")
+    end)
+    
+    -- 豆子按鈕
+    local beanButton = Instance.new("TextButton")
+    beanButton.Size = UDim2.new(1, 0, 0, 40)
+    beanButton.Position = UDim2.new(0, 0, 0, 45)
+    beanButton.BackgroundColor3 = Color3.fromRGB(215, 50, 0)
+    beanButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    beanButton.Text = "まめつぶ組"
+    beanButton.Font = Enum.Font.SourceSansBold
+    beanButton.TextSize = 16
+    beanButton.Parent = contentFrame
+    
+    beanButton.MouseButton1Click:Connect(function()
+        safeTeleport(CFrame.new(2284, 15, 911), "まめつぶ組")
+    end)
+    
+    -- 狀態提示文字
+    local statusText = Instance.new("TextLabel")
+    statusText.Size = UDim2.new(1, 0, 0, 20)
+    statusText.Position = UDim2.new(0, 0, 0, 95)
+    statusText.BackgroundTransparency = 1
+    statusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    statusText.Text = "F9で再表示"
+    statusText.Font = Enum.Font.SourceSans
+    statusText.TextSize = 11
+    statusText.TextXAlignment = Enum.TextXAlignment.Center
+    statusText.Parent = contentFrame
+    
+    -- 添加圓角
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 6)
+    uiCorner.Parent = mainFrame
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 5)
+    buttonCorner.Parent = ghostButton
+    buttonCorner:Clone().Parent = beanButton
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 6)
+    titleCorner.Parent = titleBar
+    
+    local minCorner = Instance.new("UICorner")
+    minCorner.CornerRadius = UDim.new(0, 10)
+    minCorner.Parent = minimizeButton
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 10)
+    closeCorner.Parent = closeButton
+    
+    -- 縮小/展開狀態
+    local isMinimized = false
+    local originalSize = mainFrame.Size
+    local minimizedSize = UDim2.new(0, 180, 0, 30)
+    
+    -- 縮小功能
+    minimizeButton.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        
+        if isMinimized then
+            -- 縮小
+            contentFrame.Visible = false
+            mainFrame.Size = minimizedSize
+            minimizeButton.Text = "+"
+            minimizeButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+            titleText.Text = "TP [縮小]"
+        else
+            -- 展開
+            contentFrame.Visible = true
+            mainFrame.Size = originalSize
+            minimizeButton.Text = "─"
+            minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+            titleText.Text = "テレポート"
+        end
+    end)
+    
+    -- 真正的關閉功能 - 完全移除GUI
+    closeButton.MouseButton1Click:Connect(function()
+        -- 完全銷毀整個GUI
+        screenGui:Destroy()
+        print("テレポートGUIを完全に閉じました。F9キーで再表示できます。")
+    end)
+    
+    -- 添加懸停效果
+    minimizeButton.MouseEnter:Connect(function()
+        if isMinimized then
+            minimizeButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        else
+            minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+        end
+    end)
+    
+    minimizeButton.MouseLeave:Connect(function()
+        if isMinimized then
+            minimizeButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+        else
+            minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+        end
+    end)
+    
+    closeButton.MouseEnter:Connect(function()
+        closeButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    end)
+    
+    closeButton.MouseLeave:Connect(function()
+        closeButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    end)
+    
+    ghostButton.MouseEnter:Connect(function()
+        ghostButton.BackgroundColor3 = Color3.fromRGB(0, 140, 235)
+    end)
+    
+    ghostButton.MouseLeave:Connect(function()
+        ghostButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    end)
+    
+    beanButton.MouseEnter:Connect(function()
+        beanButton.BackgroundColor3 = Color3.fromRGB(235, 60, 0)
+    end)
+    
+    beanButton.MouseLeave:Connect(function()
+        beanButton.BackgroundColor3 = Color3.fromRGB(215, 50, 0)
+    end)
+    
+    -- F9鍵重新創建GUI
+    local userInputService = game:GetService("UserInputService")
+    local function onKeyPress(input)
+        if input.KeyCode == Enum.KeyCode.F9 then
+            -- 檢查GUI是否存在
+            local currentGui = player.PlayerGui:FindFirstChild("TeleportGui")
+            if not currentGui then
+                -- 重新創建GUI
+                createTeleportGUIWithRealClose()
+                print("F9キーでテレポートGUIを再表示しました。")
             end
         end
-        task.wait(1)
     end
+    
+    userInputService.InputBegan:Connect(onKeyPress)
+    
+    return screenGui
 end
 
-task.spawn(removeLava)
-
--- すでにGUIがある場合は削除
-if player.PlayerGui:FindFirstChild("TeleportGui") then
-    player.PlayerGui.TeleportGui:Destroy()
+-- 創建帶有可重新打開按鈕的關閉功能GUI
+local function createTeleportGUIWithReopenButton()
+    -- 全局變量來存儲GUI狀態
+    local guiState = {
+        isClosed = false,
+        lastPosition = UDim2.new(0, 10, 0, 10)
+    }
+    
+    -- 創建GUI的函數
+    local function createGUI()
+        -- 移除現有GUI
+        local existingGui = player.PlayerGui:FindFirstChild("TeleportGui")
+        if existingGui then
+            existingGui:Destroy()
+        end
+        
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "TeleportGui"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = player:WaitForChild("PlayerGui")
+        
+        -- 創建主框架
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Name = "MainFrame"
+        mainFrame.Size = UDim2.new(0, 170, 0, 140)
+        mainFrame.Position = guiState.lastPosition
+        mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        mainFrame.BackgroundTransparency = 0.1
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Parent = screenGui
+        mainFrame.Active = true
+        mainFrame.Draggable = true
+        
+        -- 標題欄
+        local titleBar = Instance.new("Frame")
+        titleBar.Size = UDim2.new(1, 0, 0, 25)
+        titleBar.Position = UDim2.new(0, 0, 0, 0)
+        titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        titleBar.Parent = mainFrame
+        
+        -- 標題文字
+        local titleText = Instance.new("TextLabel")
+        titleText.Size = UDim2.new(1, -60, 1, 0)
+        titleText.Position = UDim2.new(0, 5, 0, 0)
+        titleText.BackgroundTransparency = 1
+        titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleText.Text = "テレポート"
+        titleText.Font = Enum.Font.SourceSansBold
+        titleText.TextSize = 14
+        titleText.TextXAlignment = Enum.TextXAlignment.Left
+        titleText.Parent = titleBar
+        
+        -- 縮小按鈕
+        local minimizeButton = Instance.new("TextButton")
+        minimizeButton.Name = "MinimizeButton"
+        minimizeButton.Size = UDim2.new(0, 20, 0, 20)
+        minimizeButton.Position = UDim2.new(1, -50, 0, 2)
+        minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+        minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        minimizeButton.Text = "─"
+        minimizeButton.Font = Enum.Font.SourceSansBold
+        minimizeButton.TextSize = 16
+        minimizeButton.Parent = titleBar
+        
+        -- 關閉按鈕（真正的關閉）
+        local closeButton = Instance.new("TextButton")
+        closeButton.Name = "CloseButton"
+        closeButton.Size = UDim2.new(0, 20, 0, 20)
+        closeButton.Position = UDim2.new(1, -25, 0, 2)
+        closeButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+        closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        closeButton.Text = "×"
+        closeButton.Font = Enum.Font.SourceSansBold
+        closeButton.TextSize = 16
+        closeButton.Parent = titleBar
+        
+        -- 內容區域
+        local contentFrame = Instance.new("Frame")
+        contentFrame.Name = "ContentFrame"
+        contentFrame.Size = UDim2.new(1, -10, 1, -35)
+        contentFrame.Position = UDim2.new(0, 5, 0, 30)
+        contentFrame.BackgroundTransparency = 1
+        contentFrame.Parent = mainFrame
+        
+        -- 幽靈船按鈕
+        local ghostButton = Instance.new("TextButton")
+        ghostButton.Size = UDim2.new(1, 0, 0, 40)
+        ghostButton.Position = UDim2.new(0, 0, 0, 0)
+        ghostButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+        ghostButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ghostButton.Text = "ゆうれい船"
+        ghostButton.Font = Enum.Font.SourceSansBold
+        ghostButton.TextSize = 16
+        ghostButton.Parent = contentFrame
+        
+        ghostButton.MouseButton1Click:Connect(function()
+            safeTeleport(CFrame.new(938, 249, 32888), "ゆうれい船")
+        end)
+        
+        -- 豆子按鈕
+        local beanButton = Instance.new("TextButton")
+        beanButton.Size = UDim2.new(1, 0, 0, 40)
+        beanButton.Position = UDim2.new(0, 0, 0, 45)
+        beanButton.BackgroundColor3 = Color3.fromRGB(215, 50, 0)
+        beanButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        beanButton.Text = "まめつぶ組"
+        beanButton.Font = Enum.Font.SourceSansBold
+        beanButton.TextSize = 16
+        beanButton.Parent = contentFrame
+        
+        beanButton.MouseButton1Click:Connect(function()
+            safeTeleport(CFrame.new(2284, 15, 911), "まめつぶ組")
+        end)
+        
+        -- 添加圓角
+        local uiCorner = Instance.new("UICorner")
+        uiCorner.CornerRadius = UDim.new(0, 6)
+        uiCorner.Parent = mainFrame
+        
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 5)
+        buttonCorner.Parent = ghostButton
+        buttonCorner:Clone().Parent = beanButton
+        
+        local titleCorner = Instance.new("UICorner")
+        titleCorner.CornerRadius = UDim.new(0, 6)
+        titleCorner.Parent = titleBar
+        
+        local minCorner = Instance.new("UICorner")
+        minCorner.CornerRadius = UDim.new(0, 10)
+        minCorner.Parent = minimizeButton
+        
+        local closeCorner = Instance.new("UICorner")
+        closeCorner.CornerRadius = UDim.new(0, 10)
+        closeCorner.Parent = closeButton
+        
+        -- 縮小/展開狀態
+        local isMinimized = false
+        local originalSize = mainFrame.Size
+        local minimizedSize = UDim2.new(0, 170, 0, 30)
+        
+        -- 縮小功能
+        minimizeButton.MouseButton1Click:Connect(function()
+            isMinimized = not isMinimized
+            
+            if isMinimized then
+                -- 縮小
+                contentFrame.Visible = false
+                mainFrame.Size = minimizedSize
+                minimizeButton.Text = "+"
+                minimizeButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+                titleText.Text = "TP [縮小]"
+            else
+                -- 展開
+                contentFrame.Visible = true
+                mainFrame.Size = originalSize
+                minimizeButton.Text = "─"
+                minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+                titleText.Text = "テレポート"
+            end
+        end)
+        
+        -- 真正的關閉功能
+        closeButton.MouseButton1Click:Connect(function()
+            -- 保存位置
+            guiState.lastPosition = mainFrame.Position
+            guiState.isClosed = true
+            
+            -- 完全銷毀GUI
+            screenGui:Destroy()
+            
+            -- 創建重新打開按鈕
+            local reopenButton = Instance.new("TextButton")
+            reopenButton.Name = "ReopenButton"
+            reopenButton.Size = UDim2.new(0, 80, 0, 25)
+            reopenButton.Position = guiState.lastPosition
+            reopenButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            reopenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            reopenButton.Text = "開く TP"
+            reopenButton.Font = Enum.Font.SourceSansBold
+            reopenButton.TextSize = 12
+            reopenButton.Parent = player.PlayerGui
+            reopenButton.Active = true
+            reopenButton.Draggable = true
+            
+            local reopenCorner = Instance.new("UICorner")
+            reopenCorner.CornerRadius = UDim.new(0, 5)
+            reopenCorner.Parent = reopenButton
+            
+            -- 重新打開功能
+            reopenButton.MouseButton1Click:Connect(function()
+                guiState.isClosed = false
+                guiState.lastPosition = reopenButton.Position
+                reopenButton:Destroy()
+                createGUI()
+            end)
+            
+            -- 懸停效果
+            reopenButton.MouseEnter:Connect(function()
+                reopenButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            end)
+            
+            reopenButton.MouseLeave:Connect(function()
+                reopenButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            end)
+            
+            print("テレポートGUIを完全に閉じました。再表示ボタンで開けます。")
+        end)
+        
+        -- 懸停效果
+        minimizeButton.MouseEnter:Connect(function()
+            if isMinimized then
+                minimizeButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+            else
+                minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+            end
+        end)
+        
+        minimizeButton.MouseLeave:Connect(function()
+            if isMinimized then
+                minimizeButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+            else
+                minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+            end
+        end)
+        
+        closeButton.MouseEnter:Connect(function()
+            closeButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        end)
+        
+        closeButton.MouseLeave:Connect(function()
+            closeButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+        end)
+        
+        return screenGui
+    end
+    
+    -- 初始創建GUI
+    return createGUI()
 end
 
--- GUI作成
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "TeleportGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
--- ゆうれいテレポートボタン
-local ghostButton = Instance.new("TextButton")
-ghostButton.Size = UDim2.new(0, 150, 0, 50)
-ghostButton.Position = UDim2.new(0, 50, 0, 100)
-ghostButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-ghostButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ghostButton.Text = "ゆうれい"
-ghostButton.Font = Enum.Font.SourceSansBold
-ghostButton.TextSize = 24
-ghostButton.Parent = screenGui
-ghostButton.Active = true
-ghostButton.Draggable = true
-
-ghostButton.MouseButton1Click:Connect(function()
-    local hrp = getHumanoidRootPart()
-    if hrp then
-        hrp.CFrame = CFrame.new(938, 249, 32888)
-        print("テレポート：ゆうれい")
-    else
-        warn("HumanoidRootPartが見つかりません。")
+-- 主要執行
+local function main()
+    -- 等待玩家載入
+    if not player.Character then
+        player.CharacterAdded:Wait()
     end
-end)
+    
+    -- 選擇想要的GUI版本：
+    -- createTeleportGUIWithRealClose() -- 按F9重新顯示版本
+    createTeleportGUIWithReopenButton() -- 有小按鈕重新打開版本（推薦）
+    
+    -- 開始移除岩漿
+    task.spawn(removeLava)
+    
+    print("完全關閉可能なテレポートGUIが初期化されました。")
+end
 
--- まめつぶぐみ テレポートボタン
-local beanButton = Instance.new("TextButton")
-beanButton.Size = UDim2.new(0, 150, 0, 50)
-beanButton.Position = UDim2.new(0, 50, 0, 170)
-beanButton.BackgroundColor3 = Color3.fromRGB(255, 50, 0)
-beanButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-beanButton.Text = "まめつぶぐみ"
-beanButton.Font = Enum.Font.SourceSansBold
-beanButton.TextSize = 20
-beanButton.Parent = screenGui
-beanButton.Active = true
-beanButton.Draggable = true
+-- 執行主函數
+pcall(main)
 
-beanButton.MouseButton1Click:Connect(function()
-    local hrp = getHumanoidRootPart()
-    if hrp then
-        hrp.CFrame = CFrame.new(2284, 15, 911)
-        print("テレポート：まめつぶぐみ")
-    else
-        warn("HumanoidRootPartが見つかりません。")
-    end
-end)
