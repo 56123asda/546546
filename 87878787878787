@@ -1375,6 +1375,16 @@ Tabs.ActivityTab:Button({
     end
 })
 
+Tabs.ActivityTab:Button({
+    Title = "秒殺",
+    Callback = function()
+        WindUI:Notify({ Title = "秒殺", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/aimbot"))()
+        end)
+    end
+})
+
 -- 特效顏色更換 
 Tabs.texiaoTab:Paragraph({
     Title = "特效更換",
