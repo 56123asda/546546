@@ -174,7 +174,7 @@ Tabs.GeneralTab:Button({
     Callback = function()
         WindUI:Notify({ Title = "飛行", Content = "正在加載飛行腳本...", Duration = 3 })
         pcall(function()
-            loadstring(game:HttpGet("https://gist.githubusercontent.com/kismile36/e6ada131f67fcc3a5793eb81974511c8/raw/49fd45ac4b1164135fb81de2fda6231af55cb436/%25E9%25A3%259E%25E8%25A1%258C"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/zo%20vu/%E9%9D%9E"))()
         end)
     end
 })
@@ -207,7 +207,7 @@ Tabs.GeneralTab:Button({
     Callback = function()
         WindUI:Notify({ Title = "減畫質", Content = "正在加載畫質優化腳本...", Duration = 3 })
         pcall(function()
-            loadstring(game:HttpGet("https://gist.githubusercontent.com/kismile36/e6ada131f67fcc3a5793eb81974511c8/raw/49fd45ac4b1164135fb81de2fda6231af55cb436/FPS%25E6%258F%2590%25E5%258D%2587"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E7%95%AB%E8%B3%AA"))()
         end)
     end
 })
@@ -218,7 +218,7 @@ Tabs.GeneralTab:Button({
     Callback = function()
         WindUI:Notify({ Title = "移除岩漿", Content = "正在加載移除岩漿腳本...", Duration = 3 })
         pcall(function()
-            loadstring(game:HttpGet("https://gist.githubusercontent.com/kismile36/e6ada131f67fcc3a5793eb81974511c8/raw/49fd45ac4b1164135fb81de2fda6231af55cb436/%25E7%25A7%25BB%25E9%2599%25A4%25E5%25B2%25A9%25E6%25B5%2586"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%B2%A9%E6%BC%BF"))()
         end)
     end
 })
@@ -229,7 +229,7 @@ Tabs.GeneralTab:Button({
     Callback = function()
         WindUI:Notify({ Title = "移除霧", Content = "正在加載移除霧腳本...", Duration = 3 })
         pcall(function()
-            loadstring(game:HttpGet("https://gist.githubusercontent.com/kismile36/e6ada131f67fcc3a5793eb81974511c8/raw/49fd45ac4b1164135fb81de2fda6231af55cb436/%25E7%25A7%25BB%25E9%2599%25A4%25E9%259B%25BE"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E9%9C%A7"))()
         end)
     end
 })
