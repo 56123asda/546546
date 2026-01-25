@@ -610,7 +610,7 @@ function FlashAttackModule:Start()
     
     fastAttackInstance = FastAttack.new()
     
-    -- 確保Config被應用
+    -- 確保Config設定被應用
     if fastAttackInstance then
         fastAttackInstance.Config = Config
     end
@@ -997,6 +997,7 @@ Tabs.AttackTab:Toggle({
 })
 
 -- ===================== ESP透視標籤頁 =====================
+-- 原來的ESP Pro系統（完全保持原樣）
 local espEnabled = false
 local espObjects = {}
 local RandomID = math.random(1, 1000000)
@@ -1124,6 +1125,267 @@ local function disableESPPro()
     WindUI:Notify({ Title = "ESP Pro", Content = "已禁用ESP", Duration = 2 })
 end
 
+-- ===================== 新加的ESP系統（合併版）=====================
+local ESPConfig = {
+    MainSwitch = false,     
+    ShowPlayerInfo = false,  -- 合併：顯示玩家名稱+距離+血量
+    ShowTracer = false       
+}
+
+local ESPElements = {}
+
+local function CleanupPlayerESP(player)
+    if not ESPElements[player.UserId] then return end
+    
+    if ESPElements[player.UserId].PlayerInfoESP then
+        ESPElements[player.UserId].PlayerInfoESP:Destroy()
+        ESPElements[player.UserId].PlayerInfoESP = nil
+    end
+    if ESPElements[player.UserId].PlayerInfoUpdateConn then
+        ESPElements[player.UserId].PlayerInfoUpdateConn:Disconnect()
+        ESPElements[player.UserId].PlayerInfoUpdateConn = nil
+    end
+    
+    if ESPElements[player.UserId].Tracer then
+        ESPElements[player.UserId].Tracer:Remove()
+        ESPElements[player.UserId].Tracer = nil
+    end
+    if ESPElements[player.UserId].TracerConn then
+        ESPElements[player.UserId].TracerConn:Disconnect()
+        ESPElements[player.UserId].TracerConn = nil
+    end
+end
+
+local function CreatePlayerInfoESP(player)
+    if not player.Character or not player.Character:FindFirstChild("Head") then return end
+    local head = player.Character.Head
+    
+    if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoESP then
+        ESPElements[player.UserId].PlayerInfoESP:Destroy()
+    end
+    
+    -- 創建信息顯示面板
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "PlayerInfoESP"
+    billboardGui.Adornee = head
+    billboardGui.Size = UDim2.new(0, 150, 0, 60)
+    billboardGui.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Parent = head
+    
+    -- 玩家名稱標籤
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Parent = billboardGui
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, 0, 0.25, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.TextColor3 = Color3.new(1, 1, 1)
+    nameLabel.TextScaled = true 
+    nameLabel.Font = Enum.Font.GothamSemibold
+    nameLabel.Text = player.Name
+    
+    -- 距離標籤
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Name = "DistanceLabel"
+    distanceLabel.Parent = billboardGui
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Size = UDim2.new(1, 0, 0.25, 0)
+    distanceLabel.Position = UDim2.new(0, 0, 0.25, 0)
+    distanceLabel.TextColor3 = Color3.new(1, 0.5, 0)
+    distanceLabel.TextScaled = true
+    distanceLabel.Font = Enum.Font.Gotham
+    
+    -- 血量標籤
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Name = "HealthLabel"
+    healthLabel.Parent = billboardGui
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    healthLabel.TextColor3 = Color3.new(0, 1, 0)
+    healthLabel.TextScaled = true 
+    healthLabel.Font = Enum.Font.Gotham
+    
+    -- 更新連接
+    local updateConnection = RunService.RenderStepped:Connect(function()
+        if not billboardGui.Parent or not LocalPlayer.Character or not player.Character then 
+            return 
+        end
+        
+        -- 更新距離信息
+        local localRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+        if localRoot and targetRoot then
+            local distance = (localRoot.Position - targetRoot.Position).Magnitude
+            distanceLabel.Text = string.format("距離: %.1f米", distance)   
+        end
+        
+        -- 更新血量信息
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local health = math.floor(humanoid.Health)
+            local maxHealth = math.floor(humanoid.MaxHealth)
+            
+            local healthPercent = health / maxHealth
+            if healthPercent > 0.7 then
+                healthLabel.TextColor3 = Color3.new(0, 1, 0)
+            elseif healthPercent > 0.3 then
+                healthLabel.TextColor3 = Color3.new(1, 1, 0)
+            else
+                healthLabel.TextColor3 = Color3.new(1, 0, 0)
+            end
+            
+            healthLabel.Text = string.format("血量: %d/%d (%.0f%%)", health, maxHealth, healthPercent * 100)
+        else
+            healthLabel.Text = "血量: N/A"
+        end
+    end)
+    
+    ESPElements[player.UserId] = ESPElements[player.UserId] or {}
+    ESPElements[player.UserId].PlayerInfoESP = billboardGui
+    ESPElements[player.UserId].PlayerInfoUpdateConn = updateConnection
+end
+
+local function CreateTracerESP(player)
+    if ESPElements[player.UserId] and ESPElements[player.UserId].Tracer then
+        ESPElements[player.UserId].Tracer:Remove()
+    end
+    
+    local tracer = Drawing.new("Line")
+    tracer.Color = Color3.new(1, 0, 0)
+    tracer.Thickness = 2
+    tracer.Transparency = 0.8
+    tracer.Visible = false
+    
+    local renderConnection = RunService.RenderStepped:Connect(function()
+        if not ESPConfig.MainSwitch or not ESPConfig.ShowTracer then
+            tracer.Visible = false
+            return
+        end
+        
+        local localChar = LocalPlayer.Character
+        local targetChar = player.Character
+        if not localChar or not targetChar then
+            tracer.Visible = false
+            return
+        end
+        
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        if targetRoot then
+            local screenPos, isVisible = Camera:WorldToViewportPoint(targetRoot.Position)
+            if isVisible then
+                tracer.Visible = true
+                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+            else
+                tracer.Visible = false
+            end
+        else
+            tracer.Visible = false
+        end
+    end)
+    
+    ESPElements[player.UserId] = ESPElements[player.UserId] or {}
+    ESPElements[player.UserId].Tracer = tracer
+    ESPElements[player.UserId].TracerConn = renderConnection
+end
+
+local function UpdatePlayerESP(player)
+    if player == LocalPlayer then return end
+    
+    if not player.Character then
+        CleanupPlayerESP(player)
+        return
+    end
+    
+    if not player.Character:FindFirstChild("Head") or not player.Character:FindFirstChild("HumanoidRootPart") then
+        CleanupPlayerESP(player)
+        return
+    end
+    
+    if ESPConfig.MainSwitch then
+        -- 創建射線追踪
+        CreateTracerESP(player)
+        
+        -- 創建玩家信息（合併名稱+距離+血量）
+        if ESPConfig.ShowPlayerInfo then
+            CreatePlayerInfoESP(player)
+        else
+            if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoESP then
+                ESPElements[player.UserId].PlayerInfoESP:Destroy()
+                ESPElements[player.UserId].PlayerInfoESP = nil
+            end
+            if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoUpdateConn then
+                ESPElements[player.UserId].PlayerInfoUpdateConn:Disconnect()
+                ESPElements[player.UserId].PlayerInfoUpdateConn = nil
+            end
+        end
+    else
+        CleanupPlayerESP(player)
+    end
+end
+
+local function UpdateAllESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            UpdatePlayerESP(player)
+        end
+    end
+end
+
+local function HandlePlayerRespawn(player)
+    local character = player.Character
+    if not character then
+        character = player.CharacterAdded:Wait()
+    end
+    
+    local head = character:WaitForChild("Head", 5)
+    local rootPart = character:WaitForChild("HumanoidRootPart", 5)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    
+    if head and rootPart and humanoid then
+        task.wait(0.5)
+        UpdatePlayerESP(player)
+        task.wait(1)
+        UpdatePlayerESP(player)
+    end
+end
+
+-- 初始化ESP系統
+task.spawn(function()
+    -- 处理新玩家加入
+    Players.PlayerAdded:Connect(function(player)
+        if player == LocalPlayer then return end
+        
+        if player.Character then
+            task.spawn(HandlePlayerRespawn, player)
+        end
+        
+        player.CharacterAdded:Connect(function()
+            task.spawn(HandlePlayerRespawn, player)
+        end)
+        
+        player.CharacterRemoving:Connect(function()
+            CleanupPlayerESP(player)
+        end)
+    end)
+    
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(1) 
+        UpdateAllESP()
+    end)
+    
+    while true do
+        task.wait(3) 
+        if ESPConfig.MainSwitch then
+            UpdateAllESP()
+        end
+    end
+end)
+
+-- ===================== UI控制部分 =====================
+-- ESP Pro（原有功能）
 Tabs.ESPTab:Toggle({
     Title = "ESP Pro",
     Value = false,
@@ -1136,19 +1398,61 @@ Tabs.ESPTab:Toggle({
     end
 })
 
-Players.PlayerAdded:Connect(function(player)
-    setupPlayerConnections(player)
-    if espEnabled and player.Character then
-        task.wait(1)
-        createESP(player)
+Tabs.ESPTab:Divider()
+
+-- 新ESP系統控制
+Tabs.ESPTab:Toggle({
+    Title = "進階ESP總開關",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.MainSwitch = enabled
+        if enabled then
+            WindUI:Notify({ 
+                Title = "進階ESP", 
+                Content = "已開啟", 
+                Duration = 2 
+            })
+        else
+            WindUI:Notify({ 
+                Title = "進階ESP", 
+                Content = "已關閉", 
+                Duration = 2 
+            })
+        end
+        UpdateAllESP()
     end
-end)
+})
 
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
-end)
+Tabs.ESPTab:Toggle({
+    Title = "顯示玩家信息",
+    Desc = "包含：名稱、距離、血量",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.ShowPlayerInfo = enabled
+        UpdateAllESP()
+        WindUI:Notify({ 
+            Title = "玩家信息", 
+            Content = enabled and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
 
--- 腳本啟動時為現有玩家設置連接
+Tabs.ESPTab:Toggle({
+    Title = "射线追踪（屏幕中心）",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.ShowTracer = enabled
+        UpdateAllESP()
+        WindUI:Notify({ 
+            Title = "射线追踪", 
+            Content = enabled and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+-- 為現有玩家設置連接（原有功能保持不變）
 for _, p in pairs(Players:GetPlayers()) do
     setupPlayerConnections(p)
 end
@@ -1231,6 +1535,7 @@ for name, cf in pairs(sea3Locations) do
 end
 
 -- ===================== 功能2標籤頁 =====================
+-- 自動變身大佛＋拿刀功能（完全原樣）
 local AUTO_BUDDHA_ENABLED = false
 local CHECK_INTERVAL = 5
 local BUDDHA_SLOT = 2
