@@ -1702,6 +1702,16 @@ Tabs.ActivityTab:Button({
 })
 
 Tabs.ActivityTab:Button({
+    Title = "循環傳送",
+    Callback = function()
+        WindUI:Notify({ Title = "循環傳送", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%BE%AA%E7%92%B0%E5%82%B3%E9%80%81"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
     Title = "秒殺(海)",
     Callback = function()
         WindUI:Notify({ Title = "New Attack", Content = "正在加載腳本...", Duration = 3 })
