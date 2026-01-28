@@ -1,3 +1,4 @@
+-- 小傑飛行腳本
 local P=game:GetService("Players")
 local R=game:GetService("RunService")
 local U=game:GetService("UserInputService")
@@ -14,7 +15,7 @@ local c=Instance.new("TextButton")
 local h=Instance.new("TextButton")
 local h2=Instance.new("TextButton")
 local nc=Instance.new("TextButton")
-m.Name="main"
+m.Name="小傑飛行"
 m.Parent=P.LocalPlayer:WaitForChild("PlayerGui")
 m.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
 m.ResetOnSpawn=false
@@ -97,7 +98,7 @@ t.BackgroundColor3=Color3.fromRGB(242,60,255)
 t.Position=UDim2.new(0.469327301,0,0,0)
 t.Size=UDim2.new(0,100,0,28)
 t.Font=Enum.Font.SourceSans
-t.Text="人挤人飞行"
+t.Text="小傑飛行"
 t.TextColor3=Color3.fromRGB(0,0,0)
 t.TextScaled=true
 t.TextSize=14
