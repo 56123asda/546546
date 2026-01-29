@@ -21,160 +21,87 @@ local CONFIG = {
 
 local isTeleporting = false
 local isDetecting = true
+local isSystemEnabled = true
 local lastTeleportTime = 0
 local lastTeleportedLevel = 0
+local screenGui = nil
 
 -- 創建最小化UI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SimpleTeleporterUI"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local function createUI()
+    if screenGui and screenGui.Parent then
+        screenGui:Destroy()
+    end
+    
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "SimpleTeleporterUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- 主開關按鈕
-local mainButton = Instance.new("TextButton")
-mainButton.Name = "MainButton"
-mainButton.Size = UDim2.new(0, 120, 0, 40)
-mainButton.Position = UDim2.new(0, 20, 0, 20)
-mainButton.BackgroundColor3 = Color3.fromRGB(60, 180, 100)
-mainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-mainButton.Font = Enum.Font.GothamBold
-mainButton.TextSize = 14
-mainButton.Text = "自動傳送: ON"
-mainButton.AutoButtonColor = false
+    -- 主開關按鈕
+    local mainButton = Instance.new("TextButton")
+    mainButton.Name = "MainButton"
+    mainButton.Size = UDim2.new(0, 120, 0, 40)
+    mainButton.Position = UDim2.new(0, 20, 0, 20)
+    mainButton.BackgroundColor3 = Color3.fromRGB(60, 180, 100)
+    mainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    mainButton.Font = Enum.Font.GothamBold
+    mainButton.TextSize = 14
+    mainButton.Text = "自動傳送: ON"
+    mainButton.AutoButtonColor = false
 
-local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(0, 8)
-buttonCorner.Parent = mainButton
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = mainButton
 
-local buttonShadow = Instance.new("ImageLabel")
-buttonShadow.Name = "Shadow"
-buttonShadow.Size = UDim2.new(1, 10, 1, 10)
-buttonShadow.Position = UDim2.new(0, -5, 0, -5)
-buttonShadow.BackgroundTransparency = 1
-buttonShadow.Image = "rbxassetid://1316045217"
-buttonShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-buttonShadow.ImageTransparency = 0.7
-buttonShadow.ScaleType = Enum.ScaleType.Slice
-buttonShadow.SliceCenter = Rect.new(10, 10, 118, 118)
-buttonShadow.Parent = mainButton
+    local buttonShadow = Instance.new("ImageLabel")
+    buttonShadow.Name = "Shadow"
+    buttonShadow.Size = UDim2.new(1, 10, 1, 10)
+    buttonShadow.Position = UDim2.new(0, -5, 0, -5)
+    buttonShadow.BackgroundTransparency = 1
+    buttonShadow.Image = "rbxassetid://1316045217"
+    buttonShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    buttonShadow.ImageTransparency = 0.7
+    buttonShadow.ScaleType = Enum.ScaleType.Slice
+    buttonShadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    buttonShadow.Parent = mainButton
 
-mainButton.Parent = screenGui
+    mainButton.Parent = screenGui
 
--- 關閉按鈕
-local closeButton = Instance.new("TextButton")
-closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(0, 155, 0, 15)
-closeButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Font = Enum.Font.GothamBold
-closeButton.TextSize = 18
-closeButton.Text = "X"
-closeButton.AutoButtonColor = false
+    -- 關閉按鈕
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Position = UDim2.new(0, 155, 0, 15)
+    closeButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextSize = 18
+    closeButton.Text = "X"
+    closeButton.AutoButtonColor = false
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 6)
-closeCorner.Parent = closeButton
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 6)
+    closeCorner.Parent = closeButton
 
-closeButton.Parent = screenGui
+    closeButton.Parent = screenGui
 
-screenGui.Parent = game:GetService("CoreGui")
-
--- UI 交互功能
-local dragging = false
-local dragInput, dragStart, startPos
+    screenGui.Parent = game:GetService("CoreGui")
+    
+    return mainButton, closeButton
+end
 
 -- 更新按鈕狀態
-local function updateButtonState()
+local function updateButtonState(mainButton)
+    if not mainButton then return end
+    
     if isDetecting then
         mainButton.BackgroundColor3 = Color3.fromRGB(60, 180, 100)
         mainButton.Text = "自動傳送: ON"
     else
-        mainButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        mainButton.BackgroundColor3 = Color3.fromRGB(220, 120, 50)
         mainButton.Text = "自動傳送: OFF"
     end
 end
-
--- 拖動功能
-mainButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainButton.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-mainButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        local delta = input.Position - dragStart
-        mainButton.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-        
-        -- 同步移動關閉按鈕
-        closeButton.Position = UDim2.new(
-            0,
-            startPos.X.Offset + delta.X + 135,
-            0,
-            startPos.Y.Offset + delta.Y - 5
-        )
-    end
-end)
-
--- 按鈕效果
-local function createButtonEffect(button)
-    button.MouseEnter:Connect(function()
-        game:GetService("TweenService"):Create(
-            button,
-            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0.2}
-        ):Play()
-    end)
-    
-    button.MouseLeave:Connect(function()
-        game:GetService("TweenService"):Create(
-            button,
-            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0}
-        ):Play()
-    end)
-end
-
-createButtonEffect(mainButton)
-createButtonEffect(closeButton)
-
--- 主開關按鈕點擊
-mainButton.MouseButton1Click:Connect(function()
-    isDetecting = not isDetecting
-    updateButtonState()
-    
-    if isDetecting then
-        -- 重新啟動檢測循環
-        task.spawn(mainDetectionLoop)
-    end
-end)
-
--- 關閉按鈕點擊
-closeButton.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-    isDetecting = false
-    print("傳送系統已關閉")
-end)
 
 -- 原來的功能函數（保持不變）
 local function updateCharacterReferences()
@@ -219,6 +146,8 @@ local function getAllExitTeleporters()
 end
 
 local function getCurrentLevel()
+    if not humanoidRootPart then return nil, math.huge end
+    
     local playerPosition = humanoidRootPart.Position
     local allTeleporters = getAllExitTeleporters()
     local closestLevel = nil
@@ -237,6 +166,8 @@ end
 
 local function teleportToTarget(rootPart, level)
     if isTeleporting then return end
+    if not humanoidRootPart or not humanoid then return end
+    if not isSystemEnabled or not isDetecting then return end
     
     local currentTime = tick()
     if currentTime - lastTeleportTime < CONFIG.CooldownAfterTeleport then
@@ -274,12 +205,14 @@ local function teleportToTarget(rootPart, level)
 end
 
 local function mainDetectionLoop()
-    while isDetecting do
+    while isSystemEnabled and isDetecting do
         task.wait(CONFIG.CheckInterval)
         
         if not game:IsLoaded() or not localPlayer then
             break
         end
+        
+        if not isSystemEnabled then break end
         
         if not character or not character:IsDescendantOf(Workspace) or humanoid.Health <= 0 then
             updateCharacterReferences()
@@ -312,26 +245,164 @@ local function mainDetectionLoop()
     end
 end
 
+-- 啟動系統
+local function initializeSystem()
+    isSystemEnabled = true
+    isDetecting = true
+    
+    updateCharacterReferences()
+    
+    -- 創建 UI
+    local mainButton, closeButton = createUI()
+    
+    -- UI 交互功能
+    local dragging = false
+    local dragInput, dragStart, startPos
+    local closeButtonStartPos = closeButton.Position
+
+    -- 拖動功能
+    mainButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainButton.Position
+            closeButtonStartPos = closeButton.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    mainButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            mainButton.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+            
+            -- 同步移動關閉按鈕
+            closeButton.Position = UDim2.new(
+                closeButtonStartPos.X.Scale,
+                closeButtonStartPos.X.Offset + delta.X,
+                closeButtonStartPos.Y.Scale,
+                closeButtonStartPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    -- 按鈕效果
+    local function createButtonEffect(button)
+        button.MouseEnter:Connect(function()
+            game:GetService("TweenService"):Create(
+                button,
+                TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 0.2}
+            ):Play()
+        end)
+        
+        button.MouseLeave:Connect(function()
+            game:GetService("TweenService"):Create(
+                button,
+                TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 0}
+            ):Play()
+        end)
+    end
+
+    createButtonEffect(mainButton)
+    createButtonEffect(closeButton)
+
+    -- 主開關按鈕點擊
+    mainButton.MouseButton1Click:Connect(function()
+        isDetecting = not isDetecting
+        updateButtonState(mainButton)
+        
+        if isDetecting then
+            -- 重新啟動檢測循環
+            task.spawn(mainDetectionLoop)
+        end
+    end)
+
+    -- 關閉按鈕點擊 - 完全移除UI，停止系統
+    closeButton.MouseButton1Click:Connect(function()
+        isSystemEnabled = false
+        isDetecting = false
+        if screenGui then
+            screenGui:Destroy()
+            screenGui = nil
+        end
+        print("傳送系統已完全關閉")
+        print("如需重新啟用，請重新執行腳本")
+    end)
+
+    -- 更新按鈕狀態
+    updateButtonState(mainButton)
+    
+    -- 啟動檢測循環
+    task.spawn(mainDetectionLoop)
+    
+    print("簡易傳送系統已加載！")
+    print("功能：")
+    print("  1. 綠色按鈕 - 開關自動傳送 (ON/OFF)")
+    print("  2. 紅色X按鈕 - 完全關閉系統")
+    print("  3. 可拖動位置")
+    
+    return mainButton
+end
+
+-- 重新加載功能（供外部調用）
+local function reloadSystem()
+    print("重新加載傳送系統...")
+    isSystemEnabled = true
+    isDetecting = true
+    initializeSystem()
+end
+
+-- 初始化系統
+initializeSystem()
+
+-- 角色相關事件
 localPlayer.CharacterAdded:Connect(updateCharacterReferences)
 
 localPlayer:GetPropertyChangedSignal("Parent"):Connect(function()
     if not localPlayer.Parent then
+        isSystemEnabled = false
         isDetecting = false
-        updateButtonState()
     end
 end)
 
--- 初始化
-updateCharacterReferences()
-updateButtonState()
+-- 提供全局控制函數
+_G.TeleporterSystem = {
+    Reload = reloadSystem,
+    Toggle = function()
+        isDetecting = not isDetecting
+    end,
+    Enable = function()
+        isSystemEnabled = true
+        isDetecting = true
+    end,
+    Disable = function()
+        isSystemEnabled = false
+        isDetecting = false
+    end,
+    GetStatus = function()
+        return {
+            SystemEnabled = isSystemEnabled,
+            Detecting = isDetecting
+        }
+    end
+}
 
--- 啟動檢測循環
-task.spawn(function()
-    mainDetectionLoop()
-end)
-
-print("簡易傳送系統已加載！")
-print("功能：")
-print("  1. 綠色按鈕 - 開關自動傳送")
-print("  2. 紅色X按鈕 - 關閉系統")
-print("  3. 可拖動位置")
+print("使用 _G.TeleporterSystem.Reload() 可以重新加載系統")
