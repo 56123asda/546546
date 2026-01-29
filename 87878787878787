@@ -1,1 +1,1927 @@
---[[ v1.0.0 https://wearedevs.net/obfuscator ]] return(function(...)local i={"\113\065\082\090\113\067\061\061";"\122\077\043\075\053\069\075\120\107\051\082\084\081\122\120\116";"\066\112\049\099\104\106\069\050\112\087\061\061";"\053\100\082\083\107\114\080\116\074\122\077\087\100\071\066\117\067\047\070\061";"\065\112\108\052\054\097\061\061";"\120\065\078\086\053\073\102\087\106\069\066\075\074\100\121\104","\068\104\085\101\043\080\086\074\100\066\085\117\098\099\068\051\098\067\061\061";"\053\073\104\090\081\049\113\102";"\122\106\107\102\053\082\104\090\120\065\057\066\066\119\066\069\053\077\097\061";"\066\065\104\119\122\065\104\088\107\073\102\071\113\067\061\061";"\053\049\066\088\048\100\121\069";"\084\077\056\103\081\073\066\102\118\050\061\061","\081\051\104\108";"\106\080\090\115\066\065\078\117\067\065\104\112\048\100\115\113\057\087\061\061","\084\077\056\090\113\084\066\075\107\051\082\112\081\051\122\061";"\081\119\121\117\074\122\075\122\070\082\082\043\079\104\070\049\118\067\061\061";"\056\111\118\086\069\068\050\111\100\107\114\052\088\052\067\061","\113\049\057\077\120\097\061\061","\075\072\057\120\089\087\051\076\114\100\054\061","\079\065\102\071\048\087\061\061","\118\102\066\066\121\111\086\100";"\113\065\077\075\107\051\057\089";"\120\065\075\075\053\097\061\061";"\066\100\119\119\043\043\107\053\116\071\084\074\054\114\110\101\066\069\116\100\118\049\089\109\081\055\114\098\121\102\043\079\069\114\078\057\086\107\097\052\080\107\081\108\051\116\073\067\072\100\051\051\099\050\110\056\108\086\077\122\083\118\108\121\084\086\053\112\077\055\106\119\052\114\068\068\109\098\043\090\108\109\108\103\066\118\109\122\067\121\078\101\080\070\078\122\101\088\072\088\107\102\055\101\102\104\068\108","\074\112\097\102\113\105\089\103\074\097\061\061";"\113\073\078\109\081\049\086\061";"\081\102\075\106\081\073\090\121\081\051\121\084\122\049\066\122";"\120\069\102\119\113\067\061\061";"\074\097\061\061","\081\085\086\061";"\084\043\098\116\081\071\072\078\107\057\106\070\076\081\072\061","\107\051\082\112\081\051\122\061","\086\085\097\117\066\047\109\082\117\050\073\083\106\050\084\053\052\070\087\090","\120\077\102\086\118\082\043\075\057\069\080\049\122\077\075\103\100\069\114\061","\122\065\104\119\067\065\056\088\113\067\061\061","\048\122\066\068\053\104\070\116\107\085\104\043\070\073\115\115\106\080\116\061","\079\110\066\119\053\080\107\102\107\050\061\061","\087\110\111\050\106\074\085\069\084\114\097\061","\081\051\056\075\113\110\057\119\053\073\102\108\113\087\061\061";"\056\074\113\083\109\098\111\097\047\097\061\061","\120\065\056\108\120\065\082\119";"\053\069\103\051\067\102\086\061";"";"\081\119\116\116\048\071\053\087\122\119\054\047","\081\100\082\119\048\050\061\061";"\084\077\056\054\113\100\116\061";"\084\077\056\069\120\087\061\061","\076\048\057\111\104\112\111\101\065\071\051\108\082\112\121\070\115\065\066\043\110\087\061\061","\107\051\056\047\107\110\115\103\081\073\053\061";"\107\051\056\108\107\100\077\112\113\084\086\061","\081\085\080\061","\098\106\076\084\071\067\061\061","\106\049\066\103\118\082\057\057\113\084\043\122\118\082\082\089\120\097\061\061";"\053\065\104\119\081\100\104\119\120\084\066\075\120\073\078\102";"\081\085\043\083\118\080\107\078\104\119\057\067\053\106\082\068\120\087\061\061";"\122\049\082\070\113\100\103\121\070\122\053\078\120\106\102\098\074\067\061\061";"\104\104\082\098\053\122\075\067\067\114\075\120\074\084\115\122\067\104\053\061","\113\084\115\088\081\049\086\061";"\100\068\106\114\084\101\107\066\053\055\122\104\099\050\061\061","\053\051\057\075\081\051\087\061";"\051\121\113\108\111\043\099\069\116\101\111\067\079\066\056\119\074\103\109\056\050\053\121\048\117\107\076\047\099\097\120\118\073\100\078\110\086\087\122\072","\097\120\117\081\099\050\061\061";"\104\051\082\090\053\051\104\088\086\080\066\102\107\051\104\071\107\051\104\114\086\067\061\061","\107\100\121\087\120\100\057\117";"\049\082\114\107\051\082\098\112\122\085\082\113\111\110\122\057\119\057\084\097\079\089\067\104\067\115\052\114\105\111\049\052\069\056\043\104\068\105\078\048\117\109\050\112\055\067\122\121\088\089\106\088\114\113\115\088\089\054\080\086\082\109\080\051\107\072\065\083\056\048\050\090";"\053\073\082\108\113\051\056\090";"\118\073\089\061","\121\099\083\097\107\047\122\061"}for O,I in ipairs({{585392-585391,24339+-24271},{71581-71580;-429002+429033};{-924350+924382;-1013311+1013379}})do while I[517037-517036]<I[-146237-(-146239)]do i[I[-434639+434640]],i[I[-962666+962668]],I[-904738-(-904739)],I[793729-793727]=i[I[-12712+12714]],i[I[177990-177989]],I[760901-760900]+(-195539-(-195540)),I[412889+-412887]-(881742-881741)end end local function O(O)return i[O+(-130903-(-191557))]end do local O=i local I={M=-168611+168664;["\043"]=219537+-219536;X=-699387+699437,K=864378-864345,h=692236-692215;f=518022+-517985,t=802779-802723;u=-198862+198905;D=-683808+683819;I=-165961-(-165999),["\056"]=-463353+463414;l=-881562-(-881608),V=-223049+223057;C=259482-259466,["\053"]=-941612+941640;Q=99616-99589,["\054"]=-810777+810821,m=-372374-(-372421);P=-158604+158608;["\047"]=-302861+302912,T=229118+-229095;y=-97251+97308;z=594398-594378;["\048"]=252630-252604;Z=865304+-865259,n=940756-940749,v=469239+-469209;g=-309681-(-309722),A=-148499-(-148553);j=-43427+43446,x=-440045-(-440069);d=-895717-(-895739);["\055"]=-157344-(-157406);H=-532941-(-533001);J=779987-779973;r=909514+-909478;N=-543300+543349,q=449199+-449174;F=68337-68325,["\049"]=-213879+213934,w=-1003864+1003916,W=-657070+657118,L=-558488+558498;i=71735+-71733,["\050"]=-252765+252765,o=1007442+-1007379;B=993672+-993655,E=718349+-718310;Y=-885269-(-885309),c=76101+-76070,e=917636-917621,U=-1004467-(-1004470),s=791366-791357,["\052"]=481311+-481252;k=-117430+117459,R=-689763+689768;p=499952-499918;["\057"]=517062+-517049;a=-811326-(-811358);S=-751144-(-751202);["\051"]=682133-682127;G=-125653-(-125688),O=-805014+805032;b=615436+-615394}local f=string.char local m=table.insert local a=math.floor local n=table.concat local Y=string.sub local y=type local k=string.len for i=-35721-(-35722),#O,-822984+822985 do local p=O[i]if y(p)=="\115\116\114\105\110\103"then local y=k(p)local L={}local d=923291+-923290 local b=320698+-320698 local V=636615+-636615 while d<=y do local i=Y(p,d,d)local O=I[i]if O then b=b+O*(-282899-(-282963))^((-284366+284369)-V)V=V+(-298282+298283)if V==368231-368227 then V=-498557-(-498557)local i=a(b/(681274-615738))local O=a((b%(905146-839610))/(-570639-(-570895)))local I=b%(-1032593+1032849)m(L,f(i,O,I))b=-833057+833057 end elseif i=="\061"then m(L,f(a(b/(620263+-554727))))if d>=y or Y(p,d+(-657597-(-657598)),d+(-273725+273726))~="\061"then m(L,f(a((b%(296630-231094))/(-235493-(-235749)))))end break end d=d+(-992571+992572)end O[i]=n(L)end end end return(function(i,f,m,a,n,Y,y,d,k,q,L,e,F,x,w,b,p,N,I,V)d,I,w,x,p,k,q,b,e,L,F,V,N=-62435+62435,function(I,m,a,n)local X,U,u,F,T,J,l,Z,y,c,P,A,H,E,b,t,d,p,D,o,fZ,g,r,IZ,B,iZ,W,v,C,V,h,Q,OZ,z,R,M,K,s,S,G,j while I do if I<7849792-(-243550)then if I<444473+3613032 then if I<2514718-316109 then if I<-35130+834215 then if I<928659+-488934 then if I<1279386-897087 then if I<-747119-(-973780)then y=O(-391433-(-330792))I=i[y]p=k[a[-25275+25279]]B=N(-777399+3697690,{})V=O(235959-296601)X=O(1002393+-1063024)b=i[V]v=i[X]X={v(B)}z={f(X)}v=728689-728687 F=z[v]V=b(F)b=O(-1041978+981380)d=p(V,b)p={d()}y=I(f(p))p=y d=k[a[-878528+878533]]y=d I=d and-677668+4373235 or 4611166-(-593708)else I=13430933-(-802578)end else y=O(-450666+390033)p=O(-944110-(-883482))I=i[y]y=I(p)y={}I=i[O(917346-977933)]end else if I<1506856-982209 then b=O(-819112-(-758521))d=i[b]b=O(-772498-(-711883))I=i[O(439529-500167)]p=d[b]b=k[a[-736994+736995]]d={p(b)}y={f(d)}else R=#G E=988361+-988361 K=R==E I=K and-738755+8913025 or 2143299-(-519994)end end else if I<889717+1124887 then if I<830506+1029214 then if I<763751+554890 then c=466192-466191 W=o[c]Q=W I=-794415+8552707 else I=6470351-(-952873)end else d=k[a[-848642-(-848645)]]b=-813828+813829 p=d~=b I=p and 1814691-(-220119)or 336704+11243247 end else if I<581419+1459918 then B=785397-785395 d=k[a[-695853-(-695856)]]b=219452+-219420 p=d%b V=k[a[374818-374814]]Z=-939631-(-939644)v=k[a[-477290+477292]]K=k[a[554322+-554319]]G=K-p K=-244862-(-244894)M=G/K T=Z-M X=B^T z=v/X X=-547540-(-547541)Z=-104728+104984 F=V(z)V=4294884164-(-83132)b=F%V F=842253-842251 V=F^p d=b/V V=k[a[134936-134932]]I=-349707+789492 v=d%X X=4295438572-471276 z=v*X F=V(z)V=k[a[-540688+540692]]p=nil z=V(d)b=F+z F=-836227-(-901763)v=-616495+682031 d=nil V=b%F z=b-V F=z/v B=-935569-(-935825)b=nil v=318481-318225 z=V%v X=V-z v=X/B B=772244-771988 X=F%B T=F-X B=T/Z T={z,v,X;B}F=nil k[a[651322+-651321]]=T v=nil B=nil X=nil V=nil z=nil else s=-231014-(-231015)W=I r=o[s]s=false c=r==s I=c and-832344+4895069 or 607921+9760936 Q=c end end end else if I<2561420-(-445972)then if I<2177053-(-768612)then if I<595865+2188626 then if I<-558166+3189308 then I=true d=L()F=L()p=m b=O(-635540+574928)V=L()k[d]=I v=O(85466+-146097)y=i[b]b=O(823573+-884174)I=y[b]b=L()k[b]=I X=w(12813873-153604,{F})I=w(1325666-886424,{})k[V]=I I=false k[F]=I z=i[v]v=z(X)I=v and 6062659-(-436644)or-10366+9663749 y=v else R=796619+-796618 E=#G K=b(R,E)C=1028159+-1028158 R=z(G,K)K=nil E=k[M]u=R-C D=v(u)E[R]=D I=-248087-(-1009212)R=nil end else b=15491015-(-524697)d=O(-632755-(-572106))p=d^b y=-499630+16997057 I=y-p y=O(138900-199514)p=I I=y/p y={I}I=i[O(986901+-1047497)]end else if I<2886946-(-88416)then Q=k[d]I=Q and-760432+2808544 or 6564688-880849 y=Q else X=-554003-(-554003)I=k[a[953597-953596]]d=b B=381389+-381134 v=I(X,B)p[d]=v d=nil I=659702+4244534 end end else if I<565451+3131351 then if I<-984279+4568222 then I=-991119+15150105 else I=590625+4614249 b=k[a[996933-996927]]d=b==p y=d end else if I<4696473-925357 then I=true I=13027388-238300 else d=k[a[40570-40568]]I=258657+4685164 b=k[a[-748611-(-748614)]]p=d==b y=p end end end end else if I<7321364-986993 then if I<5934599-699417 then if I<5282779-348102 then if I<4767057-(-109729)then if I<4071995-(-321391)then s=827863+-827861 r=o[s]I=10059274-(-309583)s=k[h]c=r==s Q=c else R=O(899758+-960388)M=k[V]I=14022629-(-56784)E=708576+13205558118437 G=k[d]K=G(R,E)T=O(-935331-(-874728))T=X[T]Z=M[K]T=T(X,Z)end else b=b+F v=not z d=b<=V d=v and d v=b>=V v=z and v d=v or d v=-860351+3853349 I=d and v d=16133744-800951 I=I or d end else if I<4838720-(-250735)then I=y and 7591-(-48174)or 1036937+12005417 else I=13888478-846124 p=nil k[a[285172+-285167]]=y end end else if I<6473056-707631 then if I<620728+4997943 then if I<5496188-11231 then F=35184372872892-784060 I={}k[a[-207269-(-207271)]]=I I=7882218-879736 v=255228-254973 y=k[a[977385+-977382]]V=y y=d%F k[a[943844+-943840]]=y z=d%v v=210316+-210314 F=z+v X=O(1015911+-1076523)k[a[-83770+83775]]=F T=899783+-899782 v=i[X]X=O(502550+-563160)z=v[X]v=z(p)z=O(-309379-(-248731))b[d]=z z=948083+-947972 X=-404849+404850 Z=T B=v T=493682+-493682 M=Z<T T=X-Z else I=-280165+12968368 end else I=-906992+12412652 k[d]=y end else if I<5227056-(-755060)then D=not E J=J+l y=J<=j y=D and y D=J>=j D=E and D y=D or y D=-445015+8936095 I=y and D y=658086+6176154 I=I or y else y=O(850146+-910739)I=i[y]p=O(-663368-(-602728))y=i[p]p=O(-1071467-(-1010827))i[p]=I p=O(602169-662762)i[p]=y p=k[a[910519-910518]]d=p()I=-57352+14216338 end end end else if I<405298+6597316 then if I<6279630-(-385505)then if I<354457+6123611 then if I<817461+5639133 then d=m[233480-233478]p=m[-918477+918478]I=k[a[-983976-(-983977)]]b=I I=b[d]I=I and-165699+5710469 or 4803691-(-602078)else p=O(291152-351785)I=i[p]b=621357+-621357 d=k[a[908097+-908089]]p=I(d,b)I=12374931-(-897404)end else I=-979732+10633115 z=k[F]y=z end else if I<7047523-203353 then j=k[d]J=j I=j and 15074091-(-499641)or 14997806-897030 else G=not M T=T+Z X=T<=B X=G and X G=T>=B G=M and G X=G or X G=14565287-932024 I=X and G X=16617515-755640 I=I or X end end else if I<-37264+7461944 then if I<7605193-579228 then G=O(-780955-(-720364))M=i[G]G=O(874162-934789)I=16411068-(-305785)Z=M[G]B=Z else I=true I=I and-473831+8135366 or 909462+13800156 end else if I<6750253-(-980397)then E=394360+-394354 I=k[v]l=921584-921583 j=I(l,E)E=O(-295720-(-235127))I=O(173292-233885)i[I]=j l=i[E]E=430423+-430421 I=l>E I=I and 12937099-(-30381)or 9917699-691759 else k[d]=Q s=k[P]S=84116+-84115 r=s+S c=o[r]W=Z+c c=-490939-(-491195)I=W%c r=k[C]c=M+r Z=I r=-293460+293716 I=798227+10707433 W=c%r M=W end end end end end else if I<12344131-(-183042)then if I<-499674+10108939 then if I<-175824+8859789 then if I<7295481-(-932166)then if I<8895077-701943 then if I<785950+7377076 then B=L()T=-178501-(-178504)l=O(-559003-(-498361))Z=-315772-(-315837)K=q(-310686+15612379,{})k[B]=y I=k[v]G=O(244296+-304927)y=I(T,Z)T=L()I=-445443-(-445443)k[T]=y Z=I I=-187139+187139 M=I y=i[G]G={y(K)}y=692338-692336 I={f(G)}G=I I=G[y]y=O(686190+-746831)K=I I=i[y]R=k[b]j=i[l]l=j(K)j=O(461855-522453)J=R(l,j)R={J()}y=I(f(R))R=L()k[R]=y y=-610578-(-610579)I=-977087+6763487 J=k[T]j=J J=-756887-(-756888)l=J J=532176+-532176 E=l<J J=y-l else OZ=19586574906031-(-864497)u=O(937978-998615)K={}c=nil R=L()D=L()k[R]=K r=11635145130897-(-971161)iZ=O(-3244-57404)E=N(11772555-(-705342),{R;B,T;F})K=L()A=O(517365+-577976)k[K]=E Z=nil F=e(F)F=O(-682793-(-622171))E={}fZ=6602723624329-227719 b=nil C={}k[D]=E z=nil E=i[u]o=O(-635474+574866)h=k[D]P={[A]=h,[o]=c}u=E(C,P)E=N(6413002-(-24029),{D;R;M,B;T,K})k[V]=u K=e(K)X=nil G=nil R=e(R)v=nil S=26961606309106-721896 Z=926948+28307633360537 M=e(M)U=31277718996233-(-340955)T=e(T)s=O(-201662-(-141014))K=828428+35113105644498 A=-210493+4353166868008 D=e(D)k[d]=E B=e(B)b=i[F]v=k[V]R=O(839662-900315)X=k[d]F=O(148800+-209413)T=O(183936-244568)F=b[F]B=X(T,Z)M=-1037366+7974390833847 z=v[B]F=F(b,z)Z=O(320510+-381161)z=O(-308468-(-247846))P=O(-667193-(-606545))b=i[z]C=4480344659321-(-455341)z=O(143616+-204229)z=b[z]t=O(106798-167446)H=O(-463691+403043)o=1186312630595-(-463077)X=k[V]B=k[d]T=B(Z,M)E=14620259919030-789022 Z=O(993190+-1053792)v=X[T]c=O(865458-926106)z=z(b,v)X=k[V]B=k[d]M=30829938097308-(-80760)G=O(668785+-729401)T=B(Z,M)v=X[T]T=k[V]h=O(-751006+690358)X=true Z=k[d]M=Z(G,K)B=T[M]M=k[V]T=true G=k[d]K=G(R,E)IZ=O(-495961-(-435313))Z=M[K]M=true K=k[V]D=O(-141782+81176)R=k[d]E=R(D,C)G=K[E]E=k[V]D=k[d]K=true C=D(P,A)R=E[C]E=true C=k[V]P=k[d]A=P(h,o)D=C[A]C=true A=k[V]h=k[d]o=h(c,r)P=A[o]o=k[V]c=k[d]r=c(s,S)h=o[r]r=k[V]s=k[d]A=true g=13504252624156-386188 S=s(t,U)o=true c=r[S]r=true S=k[V]t=k[d]U=t(H,g)s=S[U]U=k[V]S=true H=k[d]g=H(iZ,OZ)t=U[g]U=true g=k[V]iZ=k[d]OZ=iZ(IZ,fZ)H=g[OZ]g=true b={[v]=X;[B]=T,[Z]=M,[G]=K,[R]=E,[D]=C;[P]=A,[h]=o,[c]=r;[s]=S;[t]=U,[H]=g}v=L()k[v]=b b=x(8212055-(-616337),{v;V;d})K=13070610961889-310811 T=k[V]G=O(174188+-234780)Z=k[d]M=Z(G,K)B=T[M]X=z[B]B=b(X)I=B and 14776208-(-660401)or 4899508-174208 end else I=11836283-744788 K=R C=K G[K]=C K=nil end else if I<-225467+8676939 then d=k[a[511757+-511756]]V=786881+-786880 F=508794+-508792 b=d(V,F)d=-942133+942134 p=b==d y=p I=p and 5014318-70497 or 4463414-409613 else D=L()C=-288566-(-288666)u=O(-291493-(-230847))c=O(445762+-506404)k[D]=J y=i[u]u=O(725141-785766)I=y[u]t=-406905-(-416905)P=651487-651232 u=-870212+870213 y=I(u,C)u=L()k[u]=y I=k[v]o=580526-580524 C=-466502-(-466502)y=I(C,P)S=259968+-259968 C=L()k[C]=y P=140439-140438 I=k[v]A=k[u]y=I(P,A)P=L()h=-501959-(-501960)k[P]=y y=k[v]A=y(h,o)y=-905828-(-905829)I=A==y A=L()y=O(-584276-(-523678))k[A]=I o=O(521178-581772)W=i[c]r=k[v]s={r(S,t)}I=O(583956-644561)c=W(f(s))W=O(-117713+57119)Q=c..W I=K[I]h=o..Q I=I(K,y,h)h=L()o=O(-865302+804671)k[h]=I y=i[o]Q=N(9072215-840843,{v,D,T,b,d,R;A,h,u;P;C,B})o={y(Q)}I={f(o)}o=I I=k[A]I=I and 3623969-672273 or 828093+11619869 end end else if I<472427+8730897 then if I<-187703+9229679 then if I<254991+8614231 then b=k[a[294323+-294322]]T=11375573444135-905590 z=k[a[-518030-(-518032)]]p=m[-266692-(-266693)]B=O(-13308+-47321)I=i[O(277460+-338095)]v=k[a[120782-120779]]X=v(B,T)F=z[X]V=p[F]d=b[V]b=false y=d or b y={y}else T=O(-65687+5060)B=i[T]y=B I=-363289+8483632 end else I=true I=I and 1263358-(-202230)or 12232570-(-556518)end else if I<93556+9139030 then E=O(608842+-669435)I=i[E]E=O(383611+-444251)i[E]=I I=16762572-563043 else I=i[O(369478+-430067)]y={}end end end else if I<11941332-639396 then if I<674370+10111007 then if I<-479196+10837106 then if I<9847421-(-243336)then X=O(-339851-(-279260))M=O(-904982-(-844391))v=O(-1001085-(-940439))z=y y=i[v]v=O(-283599+222974)I=y[v]v=L()k[v]=I y=i[X]X=O(845838-906488)I=y[X]T=I Z=i[M]X=I B=Z I=Z and 5982302-(-1023572)or 17676180-959327 else E=187388-187388 R=#G I=948520+1714773 K=R==E end else I=W y=Q I=6479064-795225 end else if I<160611+10899954 then d=k[a[574598+-574596]]b=-226239-(-226304)p=d*b d=468454+4266063307229 y=p+d p=-165988+35184372254820 I=y%p k[a[-859135-(-859137)]]=I d=924788-924787 p=k[a[-973826-(-973829)]]y=p~=d I=3253+11576698 else C=not u R=R+D K=R<=E K=C and K C=R>=E C=u and C K=C or K C=9118584-891091 I=K and C K=9995040-(-322065)I=I or K end end else if I<11322757-(-808433)then if I<985101+10532299 then h=e(h)u=e(u)A=e(A)o=nil D=e(D)P=e(P)C=e(C)I=-60125+5846525 else d=k[a[-267929-(-267932)]]b=790430-790359 p=d*b d=-477585-(-477842)I=2776456-851248 y=p%d k[a[801599+-801596]]=y end else if I<673307+11802993 then W=k[d]I=W and-384304+1212744 or 6947695-(-810597)Q=W else p=k[a[-201018-(-201019)]]y=#p p=-31851+31851 I=y==p I=I and 10855355-(-185535)or 450028+-10243 end end end end else if I<13697289-(-493784)then if I<12855844-(-345064)then if I<12403160-(-478039)then if I<-744575+13446285 then if I<555577+12125037 then I=true k[a[385582+-385581]]=I y={}I=i[O(-937465-(-876846))]else I=i[O(-390684+330048)]y={d}end else I=w(-424987+3483515,{V})j={I()}I=i[O(-688128-(-627521))]y={f(j)}end else if I<12314797-(-653541)then D=O(-1065662-(-1005022))l=O(280946+-341588)I=i[l]E=i[D]l=I(E)I=O(-142722+82129)i[I]=l I=15218927-(-980602)else I=k[a[858149+-858142]]I=I and 7016286-541068 or 13965691-693356 end end else if I<506806+13577995 then if I<300983+13439613 then if I<13184220-(-113549)then I={}b=k[a[336147+-336138]]d=451652-451651 V=b b=662517-662516 F=b b=-261740+261740 p=I z=F<b I=-304023+5208259 b=d-F else l=O(623760+-684372)X=T I=6287358-(-715124)j=i[l]l=O(241397+-301992)J=j[l]j=J(p,X)J=k[a[-418584+418590]]l=J()R=j+l K=R+z R=217058+-216802 G=K%R z=G R=b[d]l=351338-351337 X=nil j=z+l J=V[j]K=R..J b[d]=K end else z=nil y={}d=e(d)B=nil F=nil b=nil X=nil I=i[O(481142+-541763)]V=e(V)v=e(v)end else if I<796888+13318925 then k[d]=J I=k[d]I=I and-836585+1153142 or 4468681-767930 else I=true I=I and 6523818-459152 or 127831+9201678 end end end else if I<991000+14485199 then if I<-333232+15659332 then if I<-621024+15643559 then if I<286005+14020109 then M=nil z=nil F=e(F)Z=nil K=nil M=L()d=e(d)v=e(v)b=e(b)v=O(-334709-(-274063))d=nil R=e(R)B=e(B)X=nil V=e(V)G=nil T=e(T)V=L()k[V]=d d=L()z=O(-718663-(-658017))b=nil B=O(-1047152+986540)k[d]=b F=i[z]z=O(741626+-802223)b=F[z]F=L()k[F]=b K=-297613-(-297614)z=i[v]Z={}v=O(984866+-1045491)X=O(-1036806-(-976215))T=L()b=z[v]v=i[X]X=O(728630-789245)I=10597610-(-493885)z=v[X]G={}X=i[B]R=-473426+473682 B=O(-594241-(-533641))v=X[B]B=L()X=-487799-(-487799)k[B]=X X=-917536+917538 k[T]=X X={}E=R k[M]=Z R=-387093+387094 D=R Z=474206-474206 R=-534731-(-534731)u=D<R R=K-D else y={}I=i[O(-972698-(-912089))]end else b=6130+13683046 d=O(193613-254237)y=13233459-(-675063)p=d^b I=y-p y=O(764593+-825240)p=I I=y/p y={I}I=i[O(-523782+463165)]end else if I<14446965-(-922850)then I=k[a[-170968+170978]]d=k[a[584759-584748]]p[I]=d I=k[a[222158+-222146]]d={I(p)}I=i[O(280525-341159)]y={f(d)}else M=k[V]E=-477111+25658410333795 R=O(-10339+-50304)T=O(-119182+58594)G=k[d]h=O(407556-468176)C=-916635+5746385504014 D=O(-240821-(-180198))K=G(R,E)Z=M[K]A=2299155855110-(-888104)K=k[V]o=-39549+33796052326390 R=k[d]E=R(D,C)P=-137583+11347151121938 G=K[E]R=k[V]E=k[d]C=O(238803+-299393)D=E(C,P)P=O(263490+-324108)K=R[D]T=F[T]E=k[V]D=k[d]C=D(P,A)R=E[C]C=k[V]r=O(957603+-1018242)P=k[d]A=P(h,o)D=C[A]h=k[V]s=34904929104718-13265 o=k[d]c=o(r,s)s=-350754+6334374045095 A=h[c]P=X[A]h=k[V]o=k[d]r=O(-922522+861896)c=o(r,s)A=h[c]C=P..A E=D..C C=k[V]P=k[d]o=-219608+25336958011374 h=O(-724506-(-663902))A=P(h,o)D=C[A]C=544106+-544099 I=13701891-(-377522)M={[G]=K;[R]=E;[D]=C}T=T(F,Z,M)P=197440+20229672477068 C=O(549174+-609773)Z=O(272001-332653)T=i[Z]G=O(178812+-239434)M=i[G]R=k[V]E=k[d]D=E(C,P)K=R[D]R=O(-1015645-(-955059))R=M[R]G={R(M,K)}Z=T(f(G))T=Z()end end else if I<15473707-(-579978)then if I<15015951-(-703845)then I=-276404+14377180 j=Z==M J=j else V=nil z=nil I=13554730-866527 v=nil end else if I<16756294-480153 then I=-661913+8085137 else y=B I=T I=B and 7699738-(-420605)or 9605666-680172 end end end end end end end I=#n return f(y)end,function(i,O)local f=b(O)local m=function(m,a)return I(i,{m;a},O,f)end return m end,function(i,O)local f=b(O)local m=function(m,a,n,Y,y,k)return I(i,{m;a,n;Y,y,k},O,f)end return m end,{},{},function(i,O)local f=b(O)local m=function(m,a,n)return I(i,{m,a,n},O,f)end return m end,function(i)for O=560787+-560786,#i,-264565-(-264566)do p[i[O]]=(381016+-381015)+p[i[O]]end if m then local I=m(true)local f=n(I)f[O(-432646-(-372035))],f[O(265791-326435)],f[O(623493+-684138)]=i,V,function()return-790954+-2946771 end return I else return a({},{[O(-938040+877396)]=V;[O(598221-658832)]=i;[O(-558750-(-498105))]=function()return-4074072-(-336347)end})end end,function(i)p[i]=p[i]-(-145376-(-145377))if p[i]==1038446-1038446 then p[i],k[i]=nil,nil end end,function()d=d+(-580348+580349)p[d]=-399701-(-399702)return d end,function(i,O)local f=b(O)local m=function(...)return I(i,{...},O,f)end return m end,function(i)local O,I=735153+-735152,i[349167-349166]while I do p[I],O=p[I]-(-586995-(-586996)),(-777405+777406)+O if-637583-(-637583)==p[I]then p[I],k[I]=nil,nil end I=i[O]end end,function(i,O)local f=b(O)local m=function(m,a,n,Y)return I(i,{m;a,n,Y},O,f)end return m end return(F(-800888+3166897,{}))(f(y))end)(getfenv and getfenv()or _ENV,unpack or table[O(781778-842405)],newproxy,setmetatable,getmetatable,select,{...})end)(...)
+local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+
+-- ************************ 移除白名單驗證，直接進入功能 ************************
+local LocalPlayer = Players.LocalPlayer
+while not LocalPlayer do
+    Players.PlayerAdded:Wait()
+    LocalPlayer = Players.LocalPlayer
+end
+
+-- 發送歡迎通知
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "小傑腳本",
+        Text = string.format("歡迎 %s，正在加載腳本...", LocalPlayer.Name),
+        Duration = 5,
+    })
+end)
+
+warn("小傑腳本已啟動，開始加載功能")
+
+-- ************************ 以下為原腳本本地核心功能（完整保留） ************************
+
+-- 加載 WindUI
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+end)
+
+if not success or not WindUI then
+    game:GetService("StarterGui"):SetCore("SendNotification",{
+        Title = "錯誤",
+        Text = "UI 加載失敗",
+        Duration = 5;
+    })
+    return
+end
+
+-- 設置白色主題
+WindUI:SetTheme("Light")
+-- 基本通知
+WindUI:Notify({
+    Title = "小傑腳本",
+    Content = "加載中",
+    Duration = 5,
+})
+
+task.wait(1)
+
+-- 服務初始化
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- 全局變量存儲
+_G.ToggleStates = _G.ToggleStates or {}
+local translateSpeed = 50
+local translateConnection = nil
+local translateAccelEnabled = false
+local _G = _G or getfenv(0)._G
+_G.FastAttack = _G.FastAttack ~= nil and _G.FastAttack or true
+
+-- 創建主窗口
+local Window = WindUI:CreateWindow({
+    Title = "小傑腳本中心",
+    Icon = "rbxassetid://6031280882",
+    Author = "小傑",
+    Folder = "WindUI",
+    Size = UDim2.fromOffset(580, 460),
+    Transparent = false,
+    Theme = "Light",
+    ScrollBarEnabled = true,
+})
+
+-- N 快捷鍵開關 UI (已從 G 改為 N)
+Window:SetToggleKey(Enum.KeyCode.N)
+
+-- 創建所有標籤頁
+local Tabs = {}
+
+-- 創建分區
+local noticeSection = Window:Section({ Title = "公告區", Opened = true })
+local functionSection = Window:Section({ Title = "主要功能", Opened = true })
+local configSection = Window:Section({ Title = "主題配置", Opened = true })
+
+Tabs.NoticeTab = noticeSection:Tab({ Title = "公告", Icon = "info" })
+Tabs.GeneralTab = functionSection:Tab({ Title = "功能1", Icon = "settings" })
+Tabs.AttackTab = functionSection:Tab({ Title = "範圍攻擊", Icon = "sword" })
+Tabs.ESPTab = functionSection:Tab({ Title = "透視", Icon = "eye" })
+Tabs.TeleportTab = functionSection:Tab({ Title = "傳送", Icon = "map-pin" })
+Tabs.ActivityTab = functionSection:Tab({ Title = "功能2", Icon = "zap" })
+Tabs.texiaoTab = configSection:Tab({ Title = "更改特效", Icon = "palette" })
+Tabs.ThemeTab = configSection:Tab({ Title = "主題顏色", Icon = "palette" })
+
+-- ===================== 公告標籤頁 =====================
+Tabs.NoticeTab:Paragraph({
+    Title = "小傑腳本中心",
+    Desc = "小傑製作\n最大幫助者 Aotsg\n腳本測試中\n禁止亂打\n禁止亂打\n禁止亂打",
+    Image = "info",
+    Color = "Red"
+})
+
+Tabs.NoticeTab:Divider()
+
+Tabs.NoticeTab:Paragraph({
+    Title = "快捷鍵說明",
+    Desc = "N: 開關界面 (已從 G 改為 N)",
+    Image = "keyboard",
+    Color = "Green"
+})
+
+-- ===================== 通用標籤頁 =====================
+local currentZoom = 128
+Tabs.GeneralTab:Slider({
+    Title = "視角縮放距離",
+    Value = { Min = 128, Max = 10000, Default = 128 },
+    Callback = function(value)
+        currentZoom = value
+        LocalPlayer.CameraMaxZoomDistance = value
+        WindUI:Notify({ Title = "視角縮放", Content = "已設置為: " .. value, Duration = 2 })
+    end
+})
+
+Tabs.GeneralTab:Divider()
+
+Tabs.GeneralTab:Input({
+    Title = "速度",
+    Value = "50",
+    Placeholder = "輸入速度值",
+    Callback = function(value)
+        local speed = tonumber(value)
+        if speed then
+            translateSpeed = speed
+            WindUI:Notify({ Title = "速度設置", Content = "速度已設置為: " .. speed, Duration = 2 })
+        end
+    end
+})
+
+Tabs.GeneralTab:Toggle({
+    Title = "加速開關",
+    Value = false,
+    Callback = function(state)
+        translateAccelEnabled = state
+        if translateConnection then
+            translateConnection:Disconnect()
+            translateConnection = nil
+        end
+        if state then
+            translateConnection = RunService.Heartbeat:Connect(function()
+                local char = LocalPlayer.Character
+                if not char then return end
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if not humanoid or humanoid.Health <= 0 then return end
+                if humanoid.MoveDirection.Magnitude > 0 then
+                    local moveDirection = humanoid.MoveDirection
+                    local acceleration = moveDirection * translateSpeed / 30
+                    char:TranslateBy(acceleration)
+                end
+            end)
+            WindUI:Notify({ Title = "加速", Content = "加速已開啟", Duration = 2 })
+        else
+            WindUI:Notify({ Title = "加速", Content = "加速已關閉", Duration = 2 })
+        end
+    end
+})
+
+Tabs.GeneralTab:Divider()
+
+Tabs.GeneralTab:Button({
+    Title = "飛行",
+    Icon = "wind",
+    Callback = function()
+        WindUI:Notify({ Title = "飛行", Content = "正在加載飛行腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/zo%20vu/%E9%9D%9E"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "追蹤",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "追蹤", Content = "正在加載追蹤腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E8%BF%BD"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "地下城",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "地下城", Content = "正在加載地下城腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%9C%B0%E4%B8%8B"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "減畫質",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "減畫質", Content = "正在加載畫質優化腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E7%95%AB%E8%B3%AA"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "移除岩漿",
+    Icon = "flame",
+    Callback = function()
+        WindUI:Notify({ Title = "移除岩漿", Content = "正在加載移除岩漿腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%B2%A9%E6%BC%BF"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "移除霧",
+    Icon = "cloud-off",
+    Callback = function()
+        WindUI:Notify({ Title = "移除霧", Content = "正在加載移除霧腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E9%9C%A7"))()
+        end)
+    end
+})
+
+-- ===================== 範圍攻擊標籤頁 =====================
+-- FlashAttackModule定義
+local FlashAttackModule = {}
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local Player = Players.LocalPlayer
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+local Net = Modules:WaitForChild("Net")
+local RegisterAttack = Net:WaitForChild("RE/RegisterAttack")
+local RegisterHit = Net:WaitForChild("RE/RegisterHit")
+local ShootGunEvent = Net:WaitForChild("RE/ShootGunEvent")
+local GunValidator = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Validator2")
+
+-- Biến trạng thái
+local FlashAttackEnabled = false
+local attackConnection = nil
+local fastAttackInstance = nil
+
+-- Biến tối ưu
+local lastScanTime = 0
+local cachedBladeHits = {}
+local lastAttackTime = 0
+
+-- Config設定 - 修改為支援0.001秒
+local Config = {
+    AttackDistance = 5000,
+    AttackMobs = true,
+    AttackPlayers = true,
+    AttackCooldown = 0.001,  -- 修改：支援0.001秒攻擊間隔
+    ComboResetTime = 0.01,   -- 修改：組合重置時間0.01秒
+    MaxCombo = 3,
+    HitboxLimbs = {"RightLowerArm", "RightUpperArm", "LeftLowerArm", "LeftUpperArm", "RightHand", "LeftHand"},
+    AutoClickEnabled = true,
+    OptimizedScanInterval = 0.3
+}
+
+-- FastAttack Class
+local FastAttack = {}
+FastAttack.__index = FastAttack
+
+function FastAttack.new()
+    local self = setmetatable({
+        Debounce = 0,
+        ComboDebounce = 0,
+        ShootDebounce = 0,
+        M1Combo = 0,
+        EnemyRootPart = nil,
+        Connections = {},
+        Overheat = {Dragonstorm = {MaxOverheat = 3, Cooldown = 0, TotalOverheat = 0, Distance = 350, Shooting = false}},
+        ShootsPerTarget = {["Dual Flintlock"] = 2},
+        SpecialShoots = {["Skull Guitar"] = "TAP", ["Bazooka"] = "Position", ["Cannon"] = "Position", ["Dragonstorm"] = "Overheat"},
+        Config = Config  -- 儲存Config參考
+    }, FastAttack)
+    
+    pcall(function()
+        self.CombatFlags = require(Modules.Flags).COMBAT_REMOTE_THREAD
+        self.ShootFunction = getupvalue(require(ReplicatedStorage.Controllers.CombatController).Attack, 9)
+        local LocalScript = Player:WaitForChild("PlayerScripts"):FindFirstChildOfClass("LocalScript")
+        if LocalScript and getsenv then
+            self.HitFunction = getsenv(LocalScript)._G.SendHitsToServer
+        end
+    end)
+    
+    return self
+end
+
+function FastAttack:IsEntityAlive(entity)
+    local humanoid = entity and entity:FindFirstChild("Humanoid")
+    return humanoid and humanoid.Health > 0
+end
+
+function FastAttack:CheckStun(Character, Humanoid, ToolTip)
+    local Stun = Character:FindFirstChild("Stun")
+    local Busy = Character:FindFirstChild("Busy")
+    if Humanoid.Sit and (ToolTip == "Sword" or ToolTip == "Melee" or ToolTip == "Blox Fruit") then
+        return false
+    elseif Stun and Stun.Value > 0 or Busy and Busy.Value then
+        return false
+    end
+    return true
+end
+
+function FastAttack:GetBladeHits(Character, Distance)
+    if tick() - lastScanTime < Config.OptimizedScanInterval and #cachedBladeHits > 0 then
+        return cachedBladeHits
+    end
+    
+    local Position = Character:GetPivot().Position
+    local BladeHits = {}
+    Distance = Distance or Config.AttackDistance
+    
+    local function ProcessTargets(Folder, CanAttack)
+        if not CanAttack then return end
+        for _, Enemy in ipairs(Folder:GetChildren()) do
+            if Enemy ~= Character and self:IsEntityAlive(Enemy) then
+                local BasePart = Enemy:FindFirstChild("HumanoidRootPart")
+                if BasePart and (Position - BasePart.Position).Magnitude <= Distance then
+                    if not self.EnemyRootPart then
+                        self.EnemyRootPart = BasePart
+                    else
+                        table.insert(BladeHits, {Enemy, BasePart})
+                    end
+                end
+            end
+        end
+    end
+    
+    ProcessTargets(Workspace.Enemies, Config.AttackMobs)
+    ProcessTargets(Workspace.Characters, Config.AttackPlayers)
+    
+    lastScanTime = tick()
+    cachedBladeHits = BladeHits
+    
+    return BladeHits
+end
+
+function FastAttack:GetClosestEnemy(Character, Distance)
+    local BladeHits = self:GetBladeHits(Character, Distance)
+    local Closest, MinDistance = nil, math.huge
+    
+    for _, Hit in ipairs(BladeHits) do
+        local Magnitude = (Character:GetPivot().Position - Hit[2].Position).Magnitude
+        if Magnitude < MinDistance then
+            MinDistance = Magnitude
+            Closest = Hit[2]
+        end
+    end
+    return Closest
+end
+
+function FastAttack:GetCombo()
+    local Combo = (tick() - self.ComboDebounce) <= Config.ComboResetTime and self.M1Combo or 0
+    Combo = Combo >= Config.MaxCombo and 1 or Combo + 1
+    self.ComboDebounce = tick()
+    self.M1Combo = Combo
+    return Combo
+end
+
+function FastAttack:ShootInTarget(TargetPosition)
+    local Character = Player.Character
+    if not self:IsEntityAlive(Character) then return end
+    
+    local Equipped = Character:FindFirstChildOfClass("Tool")
+    if not Equipped or Equipped.ToolTip ~= "Gun" then return end
+    
+    local Cooldown = Equipped:FindFirstChild("Cooldown") and Equipped.Cooldown.Value or 0.3
+    if (tick() - self.ShootDebounce) < Cooldown then return end
+    
+    local ShootType = self.SpecialShoots[Equipped.Name] or "Normal"
+    if ShootType == "Position" or (ShootType == "TAP" and Equipped:FindFirstChild("RemoteEvent")) then
+        Equipped:SetAttribute("LocalTotalShots", (Equipped:GetAttribute("LocalTotalShots") or 0) + 1)
+        GunValidator:FireServer(self:GetValidator2())
+        
+        if ShootType == "TAP" then
+            Equipped.RemoteEvent:FireServer("TAP", TargetPosition)
+        else
+            ShootGunEvent:FireServer(TargetPosition)
+        end
+        self.ShootDebounce = tick()
+    else
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+        task.wait(0.05)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        self.ShootDebounce = tick()
+    end
+end
+
+function FastAttack:GetValidator2()
+    local v1 = getupvalue(self.ShootFunction, 15)
+    local v2 = getupvalue(self.ShootFunction, 13)
+    local v3 = getupvalue(self.ShootFunction, 16)
+    local v4 = getupvalue(self.ShootFunction, 17)
+    local v5 = getupvalue(self.ShootFunction, 14)
+    local v6 = getupvalue(self.ShootFunction, 12)
+    local v7 = getupvalue(self.ShootFunction, 18)
+    
+    local v8 = v6 * v2
+    local v9 = (v5 * v2 + v6 * v1) % v3
+    v9 = (v9 * v3 + v8) % v4
+    v5 = math.floor(v9 / v3)
+    v6 = v9 - v5 * v3
+    v7 = v7 + 1
+    
+    setupvalue(self.ShootFunction, 15, v1)
+    setupvalue(self.ShootFunction, 13, v2)
+    setupvalue(self.ShootFunction, 16, v3)
+    setupvalue(self.ShootFunction, 17, v4)
+    setupvalue(self.ShootFunction, 14, v5)
+    setupvalue(self.ShootFunction, 12, v6)
+    setupvalue(self.ShootFunction, 18, v7)
+    
+    return math.floor(v9 / v4 * 16777215), v7
+end
+
+function FastAttack:UseNormalClick(Character, Humanoid, Cooldown)
+    self.EnemyRootPart = nil
+    local BladeHits = self:GetBladeHits(Character)
+    
+    if self.EnemyRootPart then
+        RegisterAttack:FireServer(Cooldown)
+        if self.CombatFlags and self.HitFunction then
+            self.HitFunction(self.EnemyRootPart, BladeHits)
+        else
+            RegisterHit:FireServer(self.EnemyRootPart, BladeHits)
+        end
+    end
+end
+
+function FastAttack:UseFruitM1(Character, Equipped, Combo)
+    local Targets = self:GetBladeHits(Character)
+    if not Targets[1] then return end
+    
+    local Direction = (Targets[1][2].Position - Character:GetPivot().Position).Unit
+    Equipped.LeftClickRemote:FireServer(Direction, Combo)
+end
+
+function FastAttack:Attack()
+    if not FlashAttackEnabled or (tick() - self.Debounce) < Config.AttackCooldown then return end
+    local Character = Player.Character
+    if not Character or not self:IsEntityAlive(Character) then return end
+    
+    local Humanoid = Character.Humanoid
+    local Equipped = Character:FindFirstChildOfClass("Tool")
+    if not Equipped then return end
+    
+    local ToolTip = Equipped.ToolTip
+    if not table.find({"Melee", "Blox Fruit", "Sword", "Gun"}, ToolTip) then return end
+    
+    local Cooldown = Equipped:FindFirstChild("Cooldown") and Equipped.Cooldown.Value or Config.AttackCooldown
+    if not self:CheckStun(Character, Humanoid, ToolTip) then return end
+    
+    local Combo = self:GetCombo()
+    Cooldown = Cooldown + (Combo >= Config.MaxCombo and 0.05 or 0)
+    self.Debounce = Combo >= Config.MaxCombo and ToolTip ~= "Gun" and (tick() + 0.05) or tick()
+    
+    if ToolTip == "Blox Fruit" and Equipped:FindFirstChild("LeftClickRemote") then
+        self:UseFruitM1(Character, Equipped, Combo)
+    elseif ToolTip == "Gun" then
+        local Target = self:GetClosestEnemy(Character, 120)
+        if Target then
+            self:ShootInTarget(Target.Position)
+        end
+    else
+        self:UseNormalClick(Character, Humanoid, Cooldown)
+    end
+end
+
+local function GetBladeHits()
+    if tick() - lastScanTime < Config.OptimizedScanInterval and #cachedBladeHits > 0 then
+        return cachedBladeHits
+    end
+    
+    local targets = {}
+    local playerPos = Player.Character and Player.Character:GetPivot().Position
+    
+    if not playerPos then return targets end
+    
+    local function ProcessFolder(folder, shouldAttack)
+        if not shouldAttack then return end
+        for _, v in pairs(folder:GetChildren()) do
+            if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                local distance = (v.HumanoidRootPart.Position - playerPos).Magnitude
+                if distance < Config.AttackDistance then
+                    table.insert(targets, v)
+                end
+            end
+        end
+    end
+    
+    ProcessFolder(Workspace.Enemies, Config.AttackMobs)
+    ProcessFolder(Workspace.Characters, Config.AttackPlayers)
+    
+    lastScanTime = tick()
+    cachedBladeHits = targets
+    return targets
+end
+
+local function AttackAll()
+    if not FlashAttackEnabled or tick() - lastAttackTime < 0.1 then return end
+    lastAttackTime = tick()
+    
+    local character = Player.Character
+    if not character then return end
+
+    local equippedWeapon = character:FindFirstChild("EquippedWeapon")
+    if not equippedWeapon then return end
+
+    local enemies = GetBladeHits()
+    if #enemies > 0 then
+        RegisterAttack:FireServer(-math.huge)
+        
+        local args = {nil, {}}
+        for i, v in pairs(enemies) do
+            if not args[1] then
+                args[1] = v.Head
+            end
+            args[2][i] = {v, v.HumanoidRootPart}
+        end
+        
+        RegisterHit:FireServer(unpack(args))
+    end
+end
+
+local Funcs = {}
+
+function GetAllBladeHits()
+    if tick() - lastScanTime < Config.OptimizedScanInterval and #cachedBladeHits > 0 then
+        return cachedBladeHits
+    end
+    return GetBladeHits()
+end
+
+function Getplayerhit()
+    local bladehits = {}
+    local playerPos = Player.Character and Player.Character:GetPivot().Position
+    
+    if not playerPos or not Config.AttackPlayers then return bladehits end
+    
+    for _, v in pairs(Workspace.Characters:GetChildren()) do
+        if v.Name ~= Player.Name and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+            local distance = (v.HumanoidRootPart.Position - playerPos).Magnitude
+            if distance <= Config.AttackDistance then
+                table.insert(bladehits, v)
+            end
+        end
+    end
+    return bladehits
+end
+
+function Funcs:Attack()
+    if not FlashAttackEnabled or tick() - lastAttackTime < 0.1 then return end
+    
+    local bladehits = GetAllBladeHits()
+    local playerHits = Getplayerhit()
+    
+    for _, v in pairs(playerHits) do
+        table.insert(bladehits, v)
+    end
+    
+    if #bladehits == 0 then return end
+    
+    local args = {
+        [1] = nil,
+        [2] = {},
+        [4] = "078da341"
+    }
+    
+    for r, v in pairs(bladehits) do
+        RegisterAttack:FireServer(0)
+        if not args[1] then
+            args[1] = v.Head
+        end
+        args[2][r] = {
+            [1] = v,
+            [2] = v.HumanoidRootPart
+        }
+    end
+    RegisterHit:FireServer(unpack(args))
+end
+
+function FlashAttackModule:Start()
+    if FlashAttackEnabled then return end
+    
+    FlashAttackEnabled = true
+    
+    lastScanTime = 0
+    cachedBladeHits = {}
+    lastAttackTime = 0
+    
+    fastAttackInstance = FastAttack.new()
+    
+    -- 確保Config設定被應用
+    if fastAttackInstance then
+        fastAttackInstance.Config = Config
+    end
+    
+    attackConnection = RunService.Heartbeat:Connect(function()
+        local currentTime = tick()
+        
+        if currentTime - lastAttackTime >= 0.1 then
+            if fastAttackInstance then
+                fastAttackInstance:Attack()
+            end
+            AttackAll()
+            Funcs:Attack()
+            lastAttackTime = currentTime
+        end
+    end)
+    
+    print("========================================")
+    print("Flash Attack 已开启")
+    print("攻击距离: " .. Config.AttackDistance)
+    print("攻击怪物: " .. (Config.AttackMobs and "开启" or "关闭"))
+    print("攻击玩家: " .. (Config.AttackPlayers and "开启" or "关闭"))
+    print("攻击冷却: " .. Config.AttackCooldown .. "秒")
+    print("========================================")
+end
+
+function FlashAttackModule:Stop()
+    if not FlashAttackEnabled then return end
+    
+    FlashAttackEnabled = false
+    
+    if attackConnection then
+        attackConnection:Disconnect()
+        attackConnection = nil
+    end
+    
+    if fastAttackInstance then
+        for _, conn in ipairs(fastAttackInstance.Connections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        fastAttackInstance = nil
+    end
+    
+    cachedBladeHits = {}
+    
+    print("========================================")
+    print("Flash Attack 已关闭")
+    print("========================================")
+end
+
+function FlashAttackModule:SetState(state)
+    if state then
+        self:Start()
+    else
+        self:Stop()
+    end
+end
+
+function FlashAttackModule:IsEnabled()
+    return FlashAttackEnabled
+end
+
+function FlashAttackModule:SetConfig(key, value)
+    if key == "AttackDistance" then
+        Config.AttackDistance = value
+        print("攻擊距離更新: " .. value)
+    elseif key == "AttackMobs" then
+        Config.AttackMobs = value
+        print("攻擊怪物更新: " .. (value and "開啟" or "關閉"))
+    elseif key == "AttackPlayers" then
+        Config.AttackPlayers = value
+        print("攻擊玩家更新: " .. (value and "開啟" or "關閉"))
+    elseif key == "AttackCooldown" then
+        Config.AttackCooldown = value
+        print("攻擊冷卻更新: " .. value .. "秒")
+    end
+    
+    -- 立即應用設定到FastAttack實例
+    if fastAttackInstance then
+        fastAttackInstance.Config = Config
+    end
+end
+
+-- ===================== 直接执行 =====================
+print("正在加载 Flash Attack...")
+print("攻击距离: 5000")
+print("等待3秒后自动开启...")
+
+-- 等待3秒后自动開啟
+task.wait(3)
+
+-- 自动開啟Flash Attack
+FlashAttackModule:Start()
+
+-- 创建一个简单的控制命令
+local function createCommands()
+    print("\n可用命令:")
+    print("/flash on - 开启Flash Attack")
+    print("/flash off - 关闭Flash Attack")
+    print("/flash status - 查看状态")
+    print("/flash distance <数值> - 设置攻击距离")
+    print("/flash mobs <on/off> - 开启/关闭攻击怪物")
+    print("/flash players <on/off> - 开启/关闭攻击玩家")
+    print("========================================")
+    
+    game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
+        msg = msg:lower()
+        
+        if msg == "/flash on" or msg == "/flash start" then
+            FlashAttackModule:Start()
+        elseif msg == "/flash off" or msg == "/flash stop" then
+            FlashAttackModule:Stop()
+        elseif msg == "/flash status" then
+            print("当前状态: " .. (FlashAttackModule:IsEnabled() and "已开启" or "已关闭"))
+            print("攻击距离: " .. Config.AttackDistance)
+            print("攻击怪物: " .. (Config.AttackMobs and "开启" or "关闭"))
+            print("攻击玩家: " .. (Config.AttackPlayers and "开启" or "关闭"))
+        elseif msg:find("/flash distance") then
+            local distance = tonumber(msg:match("/flash distance%s+(%d+)"))
+            if distance and distance >= 100 and distance <= 10000 then
+                FlashAttackModule:SetConfig("AttackDistance", distance)
+                print("攻击距离已设置为: " .. distance)
+            else
+                print("请输入有效的距离 (100-10000)")
+            end
+        elseif msg:find("/flash mobs") then
+            local state = msg:match("/flash mobs%s+(%a+)")
+            if state == "on" then
+                FlashAttackModule:SetConfig("AttackMobs", true)
+                print("攻击怪物: 开启")
+            elseif state == "off" then
+                FlashAttackModule:SetConfig("AttackMobs", false)
+                print("攻击怪物: 关闭")
+            end
+        elseif msg:find("/flash players") then
+            local state = msg:match("/flash players%s+(%a+)")
+            if state == "on" then
+                FlashAttackModule:SetConfig("AttackPlayers", true)
+                print("攻击玩家: 开启")
+            elseif state == "off" then
+                FlashAttackModule:SetConfig("AttackPlayers", false)
+                print("攻击玩家: 关闭")
+            end
+        end
+    end)
+end
+
+createCommands()
+
+-- ===================== 自動武裝色功能（從第二個腳本套用）=====================
+local AutoHakiEnabled = false
+local autoHakiTask = nil
+
+-- Auto Haki函數
+local function startAutoHakiLoop()
+    if autoHakiTask then
+        task.cancel(autoHakiTask)
+        autoHakiTask = nil
+    end
+    autoHakiTask = task.spawn(function()
+        while AutoHakiEnabled do
+            task.wait(0.2)
+            if AutoHakiEnabled and LocalPlayer.Character and not LocalPlayer.Character:FindFirstChild("HasBuso") then
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
+                end)
+            end
+        end
+        autoHakiTask = nil
+    end)
+end
+
+-- 角色添加事件
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    if AutoHakiEnabled then
+        task.wait(2)
+        startAutoHakiLoop()
+    end
+end)
+
+-- 現在添加UI控制部分
+-- 主開關 - 預設為開啟 (已從 false 改為 true)
+Tabs.AttackTab:Toggle({
+    Title = "範圍攻擊開關",
+    Value = true,  -- 預設為開啟
+    Callback = function(state)
+        if state then
+            -- 確保Config設定被應用
+            if fastAttackInstance then
+                fastAttackInstance.Config = Config
+            end
+            FlashAttackModule:Start()
+            WindUI:Notify({ 
+                Title = "範圍攻擊", 
+                Content = "已開啟", 
+                Duration = 2 
+            })
+        else
+            FlashAttackModule:Stop()
+            WindUI:Notify({ 
+                Title = "範圍攻擊", 
+                Content = "已關閉", 
+                Duration = 2 
+            })
+        end
+    end
+})
+
+Tabs.AttackTab:Divider()
+
+-- 攻擊範圍調整
+Tabs.AttackTab:Slider({
+    Title = "攻擊範圍",
+    Value = { Min = 50, Max = 10000, Default = 5000 },
+    Callback = function(value)
+        Config.AttackDistance = value
+        
+        -- 立即更新FlashAttackModule的設定
+        FlashAttackModule:SetConfig("AttackDistance", value)
+        
+        WindUI:Notify({ 
+            Title = "攻擊範圍", 
+            Content = "已設置為: " .. value, 
+            Duration = 2 
+        })
+    end
+})
+
+-- 攻擊速度調整 - 修改為支援0.001秒
+local currentAttackSpeed = 10  -- 預設值
+Tabs.AttackTab:Slider({
+    Title = "攻擊速度",
+    Value = { Min = 1, Max = 1000, Default = currentAttackSpeed },  -- 修改：Max從30改為1000
+    Callback = function(value)
+        currentAttackSpeed = value
+        local cooldown = 1 / value
+        Config.AttackCooldown = cooldown
+        
+        -- 立即更新FlashAttackModule的設定
+        FlashAttackModule:SetConfig("AttackCooldown", cooldown)
+        
+        WindUI:Notify({ 
+            Title = "攻擊速度", 
+            Content = string.format("已設置為: %d次/秒", value), 
+            Duration = 2 
+        })
+    end
+})
+
+-- 新增：輸入攻擊速度
+Tabs.AttackTab:Input({
+    Title = "輸入攻擊速度",
+    Value = tostring(currentAttackSpeed),
+    Placeholder = "輸入攻擊速度 (1-1000)",
+    Callback = function(value)
+        local speed = tonumber(value)
+        if speed then
+            if speed >= 1 and speed <= 1000 then
+                currentAttackSpeed = speed
+                
+                -- 更新滑桿的顯示值
+                local cooldown = 1 / speed
+                Config.AttackCooldown = cooldown
+                
+                -- 立即更新FlashAttackModule的設定
+                FlashAttackModule:SetConfig("AttackCooldown", cooldown)
+                
+                WindUI:Notify({ 
+                    Title = "攻擊速度", 
+                    Content = string.format("已設置為: %d次/秒 (%.3f秒/次)", speed, cooldown), 
+                    Duration = 3 
+                })
+            else
+                WindUI:Notify({ 
+                    Title = "錯誤", 
+                    Content = "攻擊速度範圍必須在 1-1000 之間", 
+                    Duration = 3 
+                })
+            end
+        else
+            WindUI:Notify({ 
+                Title = "錯誤", 
+                Content = "請輸入有效的數字", 
+                Duration = 3 
+            })
+        end
+    end
+})
+
+Tabs.AttackTab:Divider()
+
+-- 攻擊目標選擇
+Tabs.AttackTab:Toggle({
+    Title = "攻擊NPC/怪物",
+    Value = true,
+    Callback = function(state)
+        Config.AttackMobs = state
+        
+        -- 立即更新到FlashAttackModule
+        FlashAttackModule:SetConfig("AttackMobs", state)
+        
+        WindUI:Notify({ 
+            Title = "攻擊NPC", 
+            Content = state and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+Tabs.AttackTab:Toggle({
+    Title = "攻擊玩家",
+    Value = true,
+    Callback = function(state)
+        Config.AttackPlayers = state
+        
+        -- 立即更新到FlashAttackModule
+        FlashAttackModule:SetConfig("AttackPlayers", state)
+        
+        WindUI:Notify({ 
+            Title = "攻擊玩家", 
+            Content = state and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+Tabs.AttackTab:Divider()
+
+-- 自動V4
+local autoV4Task = nil
+local function callAwakeningRemote()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
+    local Backpack = LocalPlayer:FindFirstChild("Backpack")
+    if not Backpack then return end
+    local Awakening = Backpack:FindFirstChild("Awakening")
+    if not Awakening then return end
+    local RemoteFunc = Awakening:FindFirstChild("RemoteFunction")
+    if not RemoteFunc then return end
+    pcall(function()
+        RemoteFunc:InvokeServer(true)
+    end)
+end
+
+Tabs.AttackTab:Toggle({
+    Title = "自動V4",
+    Value = false,
+    Callback = function(state)
+        _G.ToggleStates["自動V4"] = state
+        if autoV4Task then
+            task.cancel(autoV4Task)
+            autoV4Task = nil
+        end
+        if state then
+            autoV4Task = task.spawn(function()
+                while _G.ToggleStates["自動V4"] do
+                    callAwakeningRemote()
+                    task.wait(1)
+                end
+                autoV4Task = nil
+            end)
+            WindUI:Notify({ Title = "自動V4", Content = "已開啟", Duration = 2 })
+        else
+            WindUI:Notify({ Title = "自動V4", Content = "已關閉", Duration = 2 })
+        end
+    end
+})
+
+-- 自動V3
+local autoV3Task = nil
+local function callRaceV3Remote()
+    local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    if not Remotes then return end
+    local CommE = Remotes:FindFirstChild("CommE")
+    if not CommE then return end
+    pcall(function()
+        CommE:FireServer("ActivateAbility")
+    end)
+end
+
+Tabs.AttackTab:Toggle({
+    Title = "自動V3",
+    Value = false,
+    Callback = function(state)
+        _G.ToggleStates["自動V3"] = state
+        if autoV3Task then
+            task.cancel(autoV3Task)
+            autoV3Task = nil
+        end
+        if state then
+            autoV3Task = task.spawn(function()
+                while _G.ToggleStates["自動V3"] do
+                    callRaceV3Remote()
+                    task.wait(1)
+                end
+                autoV3Task = nil
+            end)
+            WindUI:Notify({ Title = "自動V3", Content = "已開啟", Duration = 2 })
+        else
+            WindUI:Notify({ Title = "自動V3", Content = "已關閉", Duration = 2 })
+        end
+    end
+})
+
+Tabs.AttackTab:Divider()
+
+-- 自動武裝色（使用新套用的功能）
+Tabs.AttackTab:Toggle({
+    Title = "自動武裝色",
+    Value = true,
+    Callback = function(state)
+        AutoHakiEnabled = state
+        if state then
+            startAutoHakiLoop()
+            WindUI:Notify({ Title = "自動武裝色", Content = "已開啟", Duration = 2 })
+        else
+            if autoHakiTask then
+                task.cancel(autoHakiTask)
+                autoHakiTask = nil
+            end
+            WindUI:Notify({ Title = "自動武裝色", Content = "已關閉", Duration = 2 })
+        end
+    end
+})
+
+-- ===================== ESP透視標籤頁 =====================
+-- 原來的ESP Pro系統（完全保持原樣）
+local espEnabled = false
+local espObjects = {}
+local RandomID = math.random(1, 1000000)
+
+local function Round(num)
+    return math.floor(tonumber(num) + 0.5)
+end
+
+local function getTeamColor(player)
+    if player.Team ~= LocalPlayer.Team then
+        return Color3.fromRGB(255, 0, 0)
+    else
+        return Color3.fromRGB(0, 0, 255)
+    end
+end
+
+local function removeESP(player)
+    if espObjects[player] then
+        for _, v in pairs(espObjects[player]) do
+            if typeof(v) == "Instance" and v.Parent then
+                v:Destroy()
+            end
+        end
+        espObjects[player] = nil
+    end
+end
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+    if not player.Character then return end
+    
+    removeESP(player)
+    
+    local head = player.Character:FindFirstChild("Head")
+    if not head then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = player.Character
+    highlight.FillTransparency = 0.7
+    highlight.OutlineColor = getTeamColor(player)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = player.Character
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "NameESP_" .. RandomID
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.AlwaysOnTop = true
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.Parent = head
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 45, 0, 45)
+    avatar.Position = UDim2.new(0, 0, 0, 0)
+    avatar.BackgroundTransparency = 1
+    avatar.BorderSizePixel = 0
+    avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=150&height=150&format=png"
+    avatar.Parent = billboard
+
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, -50, 1, 0)
+    text.Position = UDim2.new(0, 50, 0, 0)
+    text.BackgroundTransparency = 1
+    text.TextStrokeTransparency = 0.5
+    text.TextScaled = true
+    text.Font = Enum.Font.Code
+    text.TextYAlignment = Enum.TextYAlignment.Top
+    text.TextXAlignment = Enum.TextXAlignment.Left
+    text.TextColor3 = getTeamColor(player)
+    text.Parent = billboard
+
+    espObjects[player] = { highlight = highlight, billboard = billboard, text = text, avatar = avatar }
+
+    task.spawn(function()
+        while espEnabled and player and player.Parent and espObjects[player] do
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local root = player.Character.HumanoidRootPart
+                local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if root and localRoot then
+                    local distance = Round((root.Position - localRoot.Position).Magnitude)
+                    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                    local healthPercent = humanoid and Round((humanoid.Health / humanoid.MaxHealth) * 100) or 0
+                    if espObjects[player] and espObjects[player].text then
+                        espObjects[player].text.Text = string.format("%s | %d M\nHealth: %d%%", player.Name, distance, healthPercent)
+                    end
+                end
+            else
+                break
+            end
+            task.wait(0.2)
+        end
+    end)
+end
+
+local function setupPlayerConnections(player)
+    player.CharacterAdded:Connect(function(character)
+        if espEnabled then
+            task.wait(0.5)
+            createESP(player)
+        end
+    end)
+    player.CharacterRemoving:Connect(function()
+        removeESP(player)
+    end)
+end
+
+local function enableESPPro()
+    espEnabled = true
+    for _, p in pairs(Players:GetPlayers()) do
+        setupPlayerConnections(p)
+        if p.Character then
+            task.wait(0.1)
+            createESP(p)
+        end
+    end
+    WindUI:Notify({ Title = "ESP Pro", Content = "已啟用ESP", Duration = 2 })
+end
+
+local function disableESPPro()
+    espEnabled = false
+    for player, _ in pairs(espObjects) do
+        removeESP(player)
+    end
+    espObjects = {}
+    WindUI:Notify({ Title = "ESP Pro", Content = "已禁用ESP", Duration = 2 })
+end
+
+-- ===================== 新加的ESP系統（合併版）=====================
+local ESPConfig = {
+    MainSwitch = false,     
+    ShowPlayerInfo = false,  -- 合併：顯示玩家名稱+距離+血量
+    ShowTracer = false       
+}
+
+local ESPElements = {}
+
+local function CleanupPlayerESP(player)
+    if not ESPElements[player.UserId] then return end
+    
+    if ESPElements[player.UserId].PlayerInfoESP then
+        ESPElements[player.UserId].PlayerInfoESP:Destroy()
+        ESPElements[player.UserId].PlayerInfoESP = nil
+    end
+    if ESPElements[player.UserId].PlayerInfoUpdateConn then
+        ESPElements[player.UserId].PlayerInfoUpdateConn:Disconnect()
+        ESPElements[player.UserId].PlayerInfoUpdateConn = nil
+    end
+    
+    if ESPElements[player.UserId].Tracer then
+        ESPElements[player.UserId].Tracer:Remove()
+        ESPElements[player.UserId].Tracer = nil
+    end
+    if ESPElements[player.UserId].TracerConn then
+        ESPElements[player.UserId].TracerConn:Disconnect()
+        ESPElements[player.UserId].TracerConn = nil
+    end
+end
+
+local function CreatePlayerInfoESP(player)
+    if not player.Character or not player.Character:FindFirstChild("Head") then return end
+    local head = player.Character.Head
+    
+    if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoESP then
+        ESPElements[player.UserId].PlayerInfoESP:Destroy()
+    end
+    
+    -- 創建信息顯示面板
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "PlayerInfoESP"
+    billboardGui.Adornee = head
+    billboardGui.Size = UDim2.new(0, 150, 0, 60)
+    billboardGui.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Parent = head
+    
+    -- 玩家名稱標籤
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Parent = billboardGui
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, 0, 0.25, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.TextColor3 = Color3.new(1, 1, 1)
+    nameLabel.TextScaled = true 
+    nameLabel.Font = Enum.Font.GothamSemibold
+    nameLabel.Text = player.Name
+    
+    -- 距離標籤
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Name = "DistanceLabel"
+    distanceLabel.Parent = billboardGui
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Size = UDim2.new(1, 0, 0.25, 0)
+    distanceLabel.Position = UDim2.new(0, 0, 0.25, 0)
+    distanceLabel.TextColor3 = Color3.new(1, 0.5, 0)
+    distanceLabel.TextScaled = true
+    distanceLabel.Font = Enum.Font.Gotham
+    
+    -- 血量標籤
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Name = "HealthLabel"
+    healthLabel.Parent = billboardGui
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    healthLabel.TextColor3 = Color3.new(0, 1, 0)
+    healthLabel.TextScaled = true 
+    healthLabel.Font = Enum.Font.Gotham
+    
+    -- 更新連接
+    local updateConnection = RunService.RenderStepped:Connect(function()
+        if not billboardGui.Parent or not LocalPlayer.Character or not player.Character then 
+            return 
+        end
+        
+        -- 更新距離信息
+        local localRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+        if localRoot and targetRoot then
+            local distance = (localRoot.Position - targetRoot.Position).Magnitude
+            distanceLabel.Text = string.format("距離: %.1f米", distance)   
+        end
+        
+        -- 更新血量信息
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local health = math.floor(humanoid.Health)
+            local maxHealth = math.floor(humanoid.MaxHealth)
+            
+            local healthPercent = health / maxHealth
+            if healthPercent > 0.7 then
+                healthLabel.TextColor3 = Color3.new(0, 1, 0)
+            elseif healthPercent > 0.3 then
+                healthLabel.TextColor3 = Color3.new(1, 1, 0)
+            else
+                healthLabel.TextColor3 = Color3.new(1, 0, 0)
+            end
+            
+            healthLabel.Text = string.format("血量: %d/%d (%.0f%%)", health, maxHealth, healthPercent * 100)
+        else
+            healthLabel.Text = "血量: N/A"
+        end
+    end)
+    
+    ESPElements[player.UserId] = ESPElements[player.UserId] or {}
+    ESPElements[player.UserId].PlayerInfoESP = billboardGui
+    ESPElements[player.UserId].PlayerInfoUpdateConn = updateConnection
+end
+
+local function CreateTracerESP(player)
+    if ESPElements[player.UserId] and ESPElements[player.UserId].Tracer then
+        ESPElements[player.UserId].Tracer:Remove()
+    end
+    
+    local tracer = Drawing.new("Line")
+    tracer.Color = Color3.new(1, 0, 0)
+    tracer.Thickness = 2
+    tracer.Transparency = 0.8
+    tracer.Visible = false
+    
+    local renderConnection = RunService.RenderStepped:Connect(function()
+        if not ESPConfig.MainSwitch or not ESPConfig.ShowTracer then
+            tracer.Visible = false
+            return
+        end
+        
+        local localChar = LocalPlayer.Character
+        local targetChar = player.Character
+        if not localChar or not targetChar then
+            tracer.Visible = false
+            return
+        end
+        
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        if targetRoot then
+            local screenPos, isVisible = Camera:WorldToViewportPoint(targetRoot.Position)
+            if isVisible then
+                tracer.Visible = true
+                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+            else
+                tracer.Visible = false
+            end
+        else
+            tracer.Visible = false
+        end
+    end)
+    
+    ESPElements[player.UserId] = ESPElements[player.UserId] or {}
+    ESPElements[player.UserId].Tracer = tracer
+    ESPElements[player.UserId].TracerConn = renderConnection
+end
+
+local function UpdatePlayerESP(player)
+    if player == LocalPlayer then return end
+    
+    if not player.Character then
+        CleanupPlayerESP(player)
+        return
+    end
+    
+    if not player.Character:FindFirstChild("Head") or not player.Character:FindFirstChild("HumanoidRootPart") then
+        CleanupPlayerESP(player)
+        return
+    end
+    
+    if ESPConfig.MainSwitch then
+        -- 創建射線追踪
+        CreateTracerESP(player)
+        
+        -- 創建玩家信息（合併名稱+距離+血量）
+        if ESPConfig.ShowPlayerInfo then
+            CreatePlayerInfoESP(player)
+        else
+            if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoESP then
+                ESPElements[player.UserId].PlayerInfoESP:Destroy()
+                ESPElements[player.UserId].PlayerInfoESP = nil
+            end
+            if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoUpdateConn then
+                ESPElements[player.UserId].PlayerInfoUpdateConn:Disconnect()
+                ESPElements[player.UserId].PlayerInfoUpdateConn = nil
+            end
+        end
+    else
+        CleanupPlayerESP(player)
+    end
+end
+
+local function UpdateAllESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            UpdatePlayerESP(player)
+        end
+    end
+end
+
+local function HandlePlayerRespawn(player)
+    local character = player.Character
+    if not character then
+        character = player.CharacterAdded:Wait()
+    end
+    
+    local head = character:WaitForChild("Head", 5)
+    local rootPart = character:WaitForChild("HumanoidRootPart", 5)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    
+    if head and rootPart and humanoid then
+        task.wait(0.5)
+        UpdatePlayerESP(player)
+        task.wait(1)
+        UpdatePlayerESP(player)
+    end
+end
+
+-- 初始化ESP系統
+task.spawn(function()
+    -- 处理新玩家加入
+    Players.PlayerAdded:Connect(function(player)
+        if player == LocalPlayer then return end
+        
+        if player.Character then
+            task.spawn(HandlePlayerRespawn, player)
+        end
+        
+        player.CharacterAdded:Connect(function()
+            task.spawn(HandlePlayerRespawn, player)
+        end)
+        
+        player.CharacterRemoving:Connect(function()
+            CleanupPlayerESP(player)
+        end)
+    end)
+    
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(1) 
+        UpdateAllESP()
+    end)
+    
+    while true do
+        task.wait(3) 
+        if ESPConfig.MainSwitch then
+            UpdateAllESP()
+        end
+    end
+end)
+
+-- ===================== UI控制部分 =====================
+-- ESP Pro（原有功能）
+Tabs.ESPTab:Toggle({
+    Title = "ESP Pro",
+    Value = false,
+    Callback = function(state)
+        if state then
+            enableESPPro()
+        else
+            disableESPPro()
+        end
+    end
+})
+
+Tabs.ESPTab:Divider()
+
+-- 新ESP系統控制
+Tabs.ESPTab:Toggle({
+    Title = "進階ESP總開關",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.MainSwitch = enabled
+        if enabled then
+            WindUI:Notify({ 
+                Title = "進階ESP", 
+                Content = "已開啟", 
+                Duration = 2 
+            })
+        else
+            WindUI:Notify({ 
+                Title = "進階ESP", 
+                Content = "已關閉", 
+                Duration = 2 
+            })
+        end
+        UpdateAllESP()
+    end
+})
+
+Tabs.ESPTab:Toggle({
+    Title = "顯示玩家信息",
+    Desc = "包含：名稱、距離、血量",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.ShowPlayerInfo = enabled
+        UpdateAllESP()
+        WindUI:Notify({ 
+            Title = "玩家信息", 
+            Content = enabled and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+Tabs.ESPTab:Toggle({
+    Title = "射线追踪（屏幕中心）",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.ShowTracer = enabled
+        UpdateAllESP()
+        WindUI:Notify({ 
+            Title = "射线追踪", 
+            Content = enabled and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+-- 為現有玩家設置連接（原有功能保持不變）
+for _, p in pairs(Players:GetPlayers()) do
+    setupPlayerConnections(p)
+end
+
+-- ===================== 傳送標籤頁 =====================
+Tabs.TeleportTab:Button({
+    Title = "傳送至一海",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelMain")
+            WindUI:Notify({ Title = "傳送", Content = "正在傳送至一海", Duration = 2 })
+        end)
+    end
+})
+
+Tabs.TeleportTab:Button({
+    Title = "傳送至二海",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelDressrosa")
+            WindUI:Notify({ Title = "傳送", Content = "正在傳送至二海", Duration = 2 })
+        end)
+    end
+})
+
+Tabs.TeleportTab:Button({
+    Title = "傳送至三海",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelZou")
+            WindUI:Notify({ Title = "傳送", Content = "正在傳送至三海", Duration = 2 })
+        end)
+    end
+})
+
+Tabs.TeleportTab:Divider()
+
+-- 二海傳送點
+local sea2Locations = {
+    ["天鵝的房間"] = CFrame.new(-287.37, 305.81, 592.98),
+    ["豪宅"] = CFrame.new(2286.93, 15.06, 910.51),
+    ["鬼船裡"] = CFrame.new(-6501.06, 83.11, -123.52),
+    ["鬼船外"] = CFrame.new(922.78, 123.96, 32842.40)
+}
+
+for name, cf in pairs(sea2Locations) do
+    Tabs.TeleportTab:Button({
+        Title = "傳送至" .. name,
+        Callback = function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = cf
+                WindUI:Notify({ Title = "傳送", Content = "已傳送至" .. name, Duration = 2 })
+            end
+        end
+    })
+end
+
+Tabs.TeleportTab:Divider()
+
+-- 三海傳送點
+local sea3Locations = {
+    ["海洋城堡"] = CFrame.new(-12463.60, 376.26, -7566.08),
+    ["海龜豪宅"] = CFrame.new(-5060.41, 316.43, -3192.30),
+    ["司法"] = CFrame.new(-5096.48, 316.43, -3177.91),
+    ["九頭蛇"] = CFrame.new(-5027.03, 316.43, -3206.07)
+}
+
+for name, cf in pairs(sea3Locations) do
+    Tabs.TeleportTab:Button({
+        Title = "傳送至" .. name,
+        Callback = function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = cf
+                WindUI:Notify({ Title = "傳送", Content = "已傳送至" .. name, Duration = 2 })
+            end
+        end
+    })
+end
+
+-- ===================== 功能2標籤頁 =====================
+-- 自動變身大佛＋拿刀功能（完全原樣）
+local AUTO_BUDDHA_ENABLED = false
+local CHECK_INTERVAL = 5
+local BUDDHA_SLOT = 2
+local SWORD_SLOT = 3
+local BUDDHA_MIN_SIZE = 20.0
+
+local ALL_SWORDS = {
+    "True Triple Katana", "Hallow Scythe", "Dark Blade", "Cursed Dual Katana",
+    "Rengoku", "Saber", "Saishi", "Shark Anchor", "Spikey Trident",
+    "Tushita", "Yama", "Dragonheart"
+}
+
+local SWORDS_TABLE = {}
+for _, sword in ipairs(ALL_SWORDS) do
+    SWORDS_TABLE[sword] = true
+end
+
+local function isBuddhaForm()
+    local character = LocalPlayer.Character
+    if not character then return false end
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return false end
+    local sizeMagnitude = humanoidRootPart.Size.Magnitude
+    return sizeMagnitude > BUDDHA_MIN_SIZE
+end
+
+local function pressNumberKey(number)
+    local virtualInput = game:GetService("VirtualInputManager")
+    local keyCode
+    if number == 1 then keyCode = Enum.KeyCode.One
+    elseif number == 2 then keyCode = Enum.KeyCode.Two
+    elseif number == 3 then keyCode = Enum.KeyCode.Three
+    elseif number == 4 then keyCode = Enum.KeyCode.Four
+    elseif number == 5 then keyCode = Enum.KeyCode.Five
+    elseif number == 6 then keyCode = Enum.KeyCode.Six
+    elseif number == 7 then keyCode = Enum.KeyCode.Seven
+    elseif number == 8 then keyCode = Enum.KeyCode.Eight
+    else keyCode = Enum.KeyCode.Nine end
+    virtualInput:SendKeyEvent(true, keyCode, false, nil)
+    task.wait(0.05)
+    virtualInput:SendKeyEvent(false, keyCode, false, nil)
+end
+
+local function pressZKey()
+    local virtualInput = game:GetService("VirtualInputManager")
+    virtualInput:SendKeyEvent(true, Enum.KeyCode.Z, false, nil)
+    task.wait(0.1)
+    virtualInput:SendKeyEvent(false, Enum.KeyCode.Z, false, nil)
+end
+
+local function hasAnySwordEquipped()
+    local character = LocalPlayer.Character
+    if not character then return false, nil end
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Tool") and SWORDS_TABLE[child.Name] then
+            return true, child.Name
+        end
+    end
+    return false, nil
+end
+
+local function equipSword()
+    pressNumberKey(SWORD_SLOT)
+    task.wait(0.3)
+    local hasSword, swordName = hasAnySwordEquipped()
+    if hasSword then
+        return true, swordName
+    end
+    task.wait(0.5)
+    return hasAnySwordEquipped()
+end
+
+local function performBuddhaTransformation()
+    local character = LocalPlayer.Character
+    if not character then return false end
+    pressNumberKey(BUDDHA_SLOT)
+    task.wait(0.5)
+    pressZKey()
+    local waitTime = 0
+    local maxWaitTime = 3
+    while waitTime < maxWaitTime do
+        task.wait(0.1)
+        waitTime = waitTime + 0.1
+        if isBuddhaForm() then
+            return true
+        end
+    end
+    return false
+end
+
+local buddhaTask = nil
+local function startBuddhaLoop()
+    if buddhaTask then
+        task.cancel(buddhaTask)
+        buddhaTask = nil
+    end
+    buddhaTask = task.spawn(function()
+        local lastCheckTime = 0
+        while AUTO_BUDDHA_ENABLED do
+            task.wait(1)
+            local currentTime = tick()
+            if currentTime - lastCheckTime >= CHECK_INTERVAL then
+                lastCheckTime = currentTime
+                if not LocalPlayer.Character then
+                    -- 等待角色
+                else
+                    if isBuddhaForm() then
+                        local hasSword, swordName = hasAnySwordEquipped()
+                        if not hasSword then
+                            equipSword()
+                        end
+                    else
+                        local success = performBuddhaTransformation()
+                        if success then
+                            task.wait(0.5)
+                            local hasSword, swordName = hasAnySwordEquipped()
+                            if not hasSword then
+                                equipSword()
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        buddhaTask = nil
+    end)
+end
+
+Tabs.ActivityTab:Toggle({
+    Title = "自動變身大佛＋拿刀",
+    Value = false,
+    Callback = function(state)
+        AUTO_BUDDHA_ENABLED = state
+        if state then
+            startBuddhaLoop()
+            WindUI:Notify({ Title = "自動變佛＋拿刀", Content = "功能已開啟", Duration = 2 })
+        else
+            if buddhaTask then
+                task.cancel(buddhaTask)
+                buddhaTask = nil
+            end
+            WindUI:Notify({ Title = "自動變佛＋拿刀", Content = "功能已關閉", Duration = 2 })
+        end
+    end
+})
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if AUTO_BUDDHA_ENABLED then
+        task.wait(2)
+        startBuddhaLoop()
+    end
+end)
+
+Tabs.ActivityTab:Divider()
+
+Tabs.ActivityTab:Button({
+    Title = "pvp",
+    Callback = function()
+        WindUI:Notify({ Title = "Aim Skill", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E6%9C%89%E7%94%A8%E8%87%AA%E8%8B%97"))()
+        end)
+    end
+})
+
+
+Tabs.ActivityTab:Button({
+    Title = "pvp(電腦)",
+    Callback = function()
+        WindUI:Notify({ Title = "PVP", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://xenopvp.vercel.app/api/FastAttack_PVP"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "循環傳送",
+    Callback = function()
+        WindUI:Notify({ Title = "循環傳送", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%BE%AA%E7%92%B0%E5%82%B3%E9%80%81"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "秒殺(海)",
+    Callback = function()
+        WindUI:Notify({ Title = "New Attack", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E7%A7%92%E6%AE%BA%E6%B5%B7"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "秒殺",
+    Callback = function()
+        WindUI:Notify({ Title = "秒殺", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/aimbot"))()
+        end)
+    end
+})
+
+-- 特效顏色更換 
+Tabs.texiaoTab:Paragraph({
+    Title = "特效更換",
+    Desc = "只有你自己能看到",
+    Image = "info",
+    Color = "Red"
+})
+
+Tabs.texiaoTab:Button({
+    Title = "白色",
+    Callback = function()
+        WindUI:Notify({ Title = "白色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/bai"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "藍色",
+    Callback = function()
+        WindUI:Notify({ Title = "藍色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E8%93%9D"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "紅色",
+    Callback = function()
+        WindUI:Notify({ Title = "紅色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%BA%A2"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "綠色",
+    Callback = function()
+        WindUI:Notify({ Title = "綠色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%BB%BF%E8%89%B2"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "七彩炫光",
+    Callback = function()
+        WindUI:Notify({ Title = "七彩炫光", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E4%B8%83%E5%BD%A9%E7%82%AB%E5%85%89"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "地獄火",
+    Callback = function()
+        WindUI:Notify({ Title = "地獄火", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E5%9C%B0%E7%8B%B1%E7%81%AB"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "未來科技（稍微卡頓）",
+    Callback = function()
+        WindUI:Notify({ Title = "地獄火", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E6%9C%AA%E6%9D%A5%E7%A7%91%E6%8A%80"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "生化危機",
+    Callback = function()
+        WindUI:Notify({ Title = "生化危機", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%94%9F%E5%8C%96%E5%8D%B1%E6%9C%BA"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "電磁脈衝",
+    Callback = function()
+        WindUI:Notify({ Title = "生化危機", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%94%B5%E7%A3%81%E8%84%89%E5%86%B2"))()
+        end)
+    end
+})
+
+-- ===================== 主題顏色標籤頁 =====================
+-- 獲取當前可用主題
+local currentThemeName = WindUI:GetCurrentTheme()
+local availableThemes = WindUI:GetThemes()
+
+-- 創建主題列表
+local themeList = {}
+for themeName, _ in pairs(availableThemes) do
+    table.insert(themeList, themeName)
+end
+
+-- 主題選擇器
+Tabs.ThemeTab:Dropdown({
+    Title = "選擇主題",
+    Values = themeList,
+    Value = currentThemeName,
+    Callback = function(selectedTheme)
+        WindUI:SetTheme(selectedTheme)
+        WindUI:Notify({
+            Title = "主題切換",
+            Content = "已切換到 " .. selectedTheme .. " 主題",
+            Icon = "palette",
+            Duration = 3
+        })
+    end
+})
+
+-- ===================== 腳本完成 =====================
+task.wait(1)
+-- 基本通知
+WindUI:Notify({
+    Title = "小傑腳本",
+    Content = "加載完成",
+    Duration = 5,
+})
+
+Window:OnClose(function()
+    WindUI:Notify({
+        Title = "小傑腳本中心",
+        Content = "界面已關閉\n按 N 重新打開",
+        Duration = 3,
+    })
+end)
