@@ -1,0 +1,336 @@
+local c00ltpgui = Instance.new("ScreenGui")
+local c00ltpframe = Instance.new("Frame")
+local PlayerProfiles = Instance.new("ImageLabel")
+local PlayerName = Instance.new("TextLabel")
+local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
+local PlayerIDs = Instance.new("TextLabel")
+local UITextSizeConstraint_2 = Instance.new("UITextSizeConstraint")
+local PlayerFar = Instance.new("TextLabel")
+local UITextSizeConstraint_3 = Instance.new("UITextSizeConstraint")
+local SpectateButton = Instance.new("ImageButton")
+local CloseButton = Instance.new("TextButton")
+local UITextSizeConstraint_4 = Instance.new("UITextSizeConstraint")
+local Title = Instance.new("TextLabel")
+local UITextSizeConstraint_5 = Instance.new("UITextSizeConstraint")
+local SkipButton = Instance.new("ImageButton")
+local TeleportButton = Instance.new("ImageButton")
+local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
+
+c00ltpgui.Name = "c00ltpgui"
+c00ltpgui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+c00ltpgui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+c00ltpgui.ResetOnSpawn = false
+
+c00ltpframe.Name = "c00ltpframe"
+c00ltpframe.Parent = c00ltpgui
+c00ltpframe.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+c00ltpframe.BackgroundTransparency = 0.500
+c00ltpframe.BorderColor3 = Color3.fromRGB(255, 0, 4)
+c00ltpframe.BorderSizePixel = 4
+c00ltpframe.Position = UDim2.new(0.0292056073, 0, 0.0782123283, 0)
+c00ltpframe.Size = UDim2.new(0.217337459, 0, 0.119047619, 0)
+
+PlayerProfiles.Name = "PlayerProfiles"
+PlayerProfiles.Parent = c00ltpframe
+PlayerProfiles.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+PlayerProfiles.BorderColor3 = Color3.fromRGB(255, 0, 4)
+PlayerProfiles.BorderSizePixel = 2
+PlayerProfiles.Position = UDim2.new(0.0313390307, 0, 0.0484581515, 0)
+PlayerProfiles.Size = UDim2.new(0.284900278, 0, 0.869565189, 0)
+PlayerProfiles.Image = "rbxassetid://12222223187"
+
+PlayerName.Name = "PlayerName"
+PlayerName.Parent = c00ltpframe
+PlayerName.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PlayerName.BackgroundTransparency = 0.500
+PlayerName.BorderColor3 = Color3.fromRGB(255, 0, 4)
+PlayerName.BorderSizePixel = 2
+PlayerName.Position = UDim2.new(0.344729334, 0, 0.0484581515, 0)
+PlayerName.Size = UDim2.new(0.621082604, 0, 0.434782594, 0)
+PlayerName.Font = Enum.Font.SourceSans
+PlayerName.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerName.TextScaled = true
+PlayerName.TextSize = 37.000
+PlayerName.TextWrapped = true
+
+UITextSizeConstraint.Parent = PlayerName
+UITextSizeConstraint.MaxTextSize = 50
+
+PlayerIDs.Name = "PlayerIDs"
+PlayerIDs.Parent = c00ltpframe
+PlayerIDs.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PlayerIDs.BackgroundTransparency = 0.500
+PlayerIDs.BorderColor3 = Color3.fromRGB(255, 0, 4)
+PlayerIDs.BorderSizePixel = 2
+PlayerIDs.Position = UDim2.new(0.344729334, 0, 0.546652555, 0)
+PlayerIDs.Size = UDim2.new(0.358974367, 0, 0.365217388, 0)
+PlayerIDs.Font = Enum.Font.SourceSans
+PlayerIDs.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerIDs.TextScaled = true
+PlayerIDs.TextSize = 37.000
+PlayerIDs.TextWrapped = true
+
+UITextSizeConstraint_2.Parent = PlayerIDs
+UITextSizeConstraint_2.MaxTextSize = 42
+
+PlayerFar.Name = "PlayerFar"
+PlayerFar.Parent = c00ltpframe
+PlayerFar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PlayerFar.BackgroundTransparency = 0.500
+PlayerFar.BorderColor3 = Color3.fromRGB(255, 0, 4)
+PlayerFar.BorderSizePixel = 2
+PlayerFar.Position = UDim2.new(0.740740716, 0, 0.546652555, 0)
+PlayerFar.Size = UDim2.new(0.225071222, 0, 0.365217388, 0)
+PlayerFar.Font = Enum.Font.SourceSans
+PlayerFar.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerFar.TextScaled = true
+PlayerFar.TextSize = 37.000
+PlayerFar.TextWrapped = true
+
+UITextSizeConstraint_3.Parent = PlayerFar
+UITextSizeConstraint_3.MaxTextSize = 42
+
+SpectateButton.Name = "SpectateButton"
+SpectateButton.Parent = c00ltpframe
+SpectateButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpectateButton.BackgroundTransparency = 0.500
+SpectateButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+SpectateButton.BorderSizePixel = 2
+SpectateButton.Position = UDim2.new(1.03133917, 0, 0, 0)
+SpectateButton.Size = UDim2.new(0.156695157, 0, 0.452173918, 0)
+SpectateButton.Image = "rbxassetid://7035631382"
+
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = c00ltpframe
+CloseButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+CloseButton.BackgroundTransparency = 0.500
+CloseButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+CloseButton.BorderSizePixel = 2
+CloseButton.Position = UDim2.new(0, 0, 1.09565222, 0)
+CloseButton.Size = UDim2.new(1, 0, 0.139130428, 0)
+CloseButton.Font = Enum.Font.SourceSans
+CloseButton.Text = "Close"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextScaled = true
+CloseButton.TextSize = 14.000
+CloseButton.TextWrapped = true
+
+UITextSizeConstraint_4.Parent = CloseButton
+UITextSizeConstraint_4.MaxTextSize = 14
+
+Title.Name = "Title"
+Title.Parent = c00ltpframe
+Title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Title.BackgroundTransparency = 0.500
+Title.BorderColor3 = Color3.fromRGB(255, 0, 4)
+Title.BorderSizePixel = 2
+Title.Position = UDim2.new(0, 0, -0.192477822, 0)
+Title.Size = UDim2.new(1, 0, 0.130434781, 0)
+Title.Font = Enum.Font.SourceSans
+Title.Text = "c00ltpgui - made by masswel1l"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextScaled = true
+Title.TextSize = 37.000
+Title.TextWrapped = true
+
+UITextSizeConstraint_5.Parent = Title
+UITextSizeConstraint_5.MaxTextSize = 15
+
+SkipButton.Name = "SkipButton"
+SkipButton.Parent = c00ltpframe
+SkipButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SkipButton.BackgroundTransparency = 0.500
+SkipButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+SkipButton.BorderSizePixel = 2
+SkipButton.Position = UDim2.new(1.03133917, 0, 0.539682388, 0)
+SkipButton.Size = UDim2.new(0.156695157, 0, 0.452173918, 0)
+SkipButton.Image = "rbxassetid://11283329347"
+
+TeleportButton.Name = "TeleportButton"
+TeleportButton.Parent = c00ltpframe
+TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TeleportButton.BackgroundTransparency = 0.500
+TeleportButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+TeleportButton.BorderSizePixel = 2
+TeleportButton.Position = UDim2.new(1.2108264, 0, 0, 0)
+TeleportButton.Size = UDim2.new(0.156695157, 0, 0.452173918, 0)
+TeleportButton.Image = "rbxassetid://2249604063"
+
+UIAspectRatioConstraint.Parent = c00ltpframe
+UIAspectRatioConstraint.AspectRatio = 3.052
+
+-- Scripts:
+
+local function EMKXIS_fake_script() -- c00ltpframe.CoreScripts 
+	local script = Instance.new('LocalScript', c00ltpframe)
+
+	local Players = game:GetService("Players")
+	local UserInputService = game:GetService("UserInputService")
+	local TweenService = game:GetService("TweenService")
+	local StarterGui = game:GetService("StarterGui")
+	
+	local player = Players.LocalPlayer
+	local camera = workspace.CurrentCamera
+	
+	local frame = script.Parent
+	local spectateButton = frame:WaitForChild("SpectateButton")
+	local skipButton = frame:WaitForChild("SkipButton")
+	local closeButton = frame:WaitForChild("CloseButton")
+	local teleport = frame:WaitForChild("TeleportButton")
+	
+	local playerName = frame:WaitForChild("PlayerName")
+	local playerIDs = frame:WaitForChild("PlayerIDs")
+	local playerFar = frame:WaitForChild("PlayerFar")
+	local title = frame:WaitForChild("Title")
+	local profileImage = frame:WaitForChild("PlayerProfiles")
+	
+	local currentTarget = nil
+	local playerList = {}
+	local spectating = false
+	
+	local clickSound = Instance.new("Sound")
+	clickSound.SoundId = "rbxassetid://12221967"
+	clickSound.Volume = 1
+	clickSound.Parent = frame
+	
+	local function playClick()
+		clickSound:Play()
+	end
+	
+	game.StarterGui:SetCore("SendNotification", {
+		Title = "Thank you for using my script!",
+		Text = "youtube/masswe11lll",
+		Duration = 3,
+		Icon = "rbxassetid://6376283901"
+	})
+	
+	local dragging = false
+	local dragStart, startPos
+	local dragTween
+	
+	local function updateDrag(input)
+		local delta = input.Position - dragStart
+		local newPos = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+		if dragTween then dragTween:Cancel() end
+		dragTween = TweenService:Create(frame, TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = newPos})
+		dragTween:Play()
+	end
+	
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateDrag(input)
+		end
+	end)
+	
+	local function updatePlayerInfo()
+		if not currentTarget then return end
+		playerName.Text = "Name: " .. currentTarget.Name
+		playerIDs.Text = "UserId: " .. currentTarget.UserId
+		if player.Character and currentTarget.Character then
+			local myRoot = player.Character:FindFirstChild("HumanoidRootPart")
+			local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+			if myRoot and targetRoot then
+				local distance = (myRoot.Position - targetRoot.Position).Magnitude
+				playerFar.Text = "Distance: " .. math.floor(distance) .. " studs"
+			else
+				playerFar.Text = "Distance: N/A"
+			end
+		else
+			playerFar.Text = "Distance: N/A"
+		end
+		local thumbType = Enum.ThumbnailType.HeadShot
+		local thumbSize = Enum.ThumbnailSize.Size150x150
+		local content, isReady = Players:GetUserThumbnailAsync(currentTarget.UserId, thumbType, thumbSize)
+		profileImage.Image = content
+	end
+	
+	local function getNextTarget()
+		playerList = {}
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player then
+				table.insert(playerList, plr)
+			end
+		end
+		if #playerList == 0 then
+			currentTarget = nil
+			return
+		end
+		if not currentTarget then
+			currentTarget = playerList[1]
+		else
+			local index = table.find(playerList, currentTarget) or 0
+			index = index + 1
+			if index > #playerList then index = 1 end
+			currentTarget = playerList[index]
+		end
+		updatePlayerInfo()
+	end
+	
+	task.spawn(function()
+		while true do
+			if currentTarget then
+				updatePlayerInfo()
+			end
+			task.wait(1)
+		end
+	end)
+	
+	skipButton.MouseButton1Click:Connect(function()
+		playClick()
+		getNextTarget()
+	end)
+	
+	closeButton.MouseButton1Click:Connect(function()
+		playClick()
+		frame.Visible = false
+	end)
+	
+	teleport.MouseButton1Click:Connect(function()
+		playClick()
+		if currentTarget and currentTarget ~= player then
+			if player.Character and currentTarget.Character then
+				local myRoot = player.Character:FindFirstChild("HumanoidRootPart")
+				local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+				if myRoot and targetRoot then
+					myRoot.CFrame = targetRoot.CFrame * CFrame.new(3, 0, 0)
+				end
+			end
+		end
+	end)
+	
+	spectateButton.MouseButton1Click:Connect(function()
+		playClick()
+		if not currentTarget or currentTarget == player then return end
+		if not spectating then
+			if currentTarget.Character and currentTarget.Character:FindFirstChild("Humanoid") then
+				camera.CameraSubject = currentTarget.Character.Humanoid
+				spectating = true
+			end
+		else
+			if player.Character and player.Character:FindFirstChild("Humanoid") then
+				camera.CameraSubject = player.Character.Humanoid
+				spectating = false
+			end
+		end
+	end)
+	
+	getNextTarget()
+	
+end
+coroutine.wrap(EMKXIS_fake_script)()
