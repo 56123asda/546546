@@ -1,0 +1,1588 @@
+-- ==================== 輸入式速度調節系統 ====================
+local SpeedInputSystem = {
+    CurrentSpeed = 8,
+    MinSafeSpeed = 1,
+    MaxSafeSpeed = 500,
+    SpeedScale = 1.5,
+    Acceleration = 0.5,
+    Deceleration = 0.8,
+    InputEnabled = true
+}
+
+function SpeedInputSystem:GetAdjustedSpeed(baseSpeed)
+    return baseSpeed * self.SpeedScale
+end
+
+function SpeedInputSystem:SmoothAccelerate(currentSpeed, targetSpeed)
+    if currentSpeed < targetSpeed then
+        return currentSpeed + self.Acceleration * (targetSpeed - currentSpeed)
+    else
+        return currentSpeed - self.Deceleration * (currentSpeed - targetSpeed)
+    end
+end
+
+function SpeedInputSystem:SetSpeedByInput(inputText)
+    if not self.InputEnabled then
+        return false, "速度輸入功能已禁用"
+    end
+    
+    -- 清理輸入
+    local cleanInput = string.gsub(inputText, "%s+", "")
+    
+    -- 檢查是否為數字
+    local speedNumber = tonumber(cleanInput)
+    if not speedNumber then
+        return false, "請輸入有效的數字"
+    end
+    
+    -- 檢查範圍
+    if speedNumber < self.MinSafeSpeed then
+        return false, string.format("速度不能低於 %d", self.MinSafeSpeed)
+    end
+    
+    if speedNumber > self.MaxSafeSpeed then
+        return false, string.format("速度不能高於 %d", self.MaxSafeSpeed)
+    end
+    
+    -- 設定速度
+    self.CurrentSpeed = speedNumber
+    return true, string.format("速度已設為: %d", speedNumber)
+end
+
+function SpeedInputSystem:ToggleInput(enabled)
+    self.InputEnabled = enabled
+    return enabled
+end
+
+-- ==================== 優化的穿牆系統 ====================
+local NoClipSystem = {
+    Enabled = false,
+    NoClipConnections = {},
+    CurrentCharacter = nil,
+    HeartbeatConnection = nil,
+    CachedParts = {}
+}
+
+function NoClipSystem:EnableNoClip(character)
+    if not character or not character:IsDescendantOf(game) then 
+        return false 
+    end
+    
+    self:DisableNoClip()
+    
+    local partsCache = {}
+    
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+            part.CollisionGroup = "NoCollision"
+            table.insert(partsCache, part)
+        end
+    end
+    
+    self.CachedParts[character] = partsCache
+    
+    local descendantAdded
+    descendantAdded = character.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("BasePart") then
+            descendant.CanCollide = false
+            descendant.CollisionGroup = "NoCollision"
+            table.insert(self.CachedParts[character], descendant)
+        end
+    end)
+    
+    table.insert(self.NoClipConnections, descendantAdded)
+    
+    local RunService = game:GetService("RunService")
+    local lastCheck = tick()
+    local CHECK_INTERVAL = 0.5
+    
+    self.HeartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not self.Enabled or not self.CurrentCharacter then 
+            return 
+        end
+        
+        local now = tick()
+        if now - lastCheck >= CHECK_INTERVAL then
+            lastCheck = now
+            local parts = self.CachedParts[character]
+            if parts then
+                for i = 1, math.min(#parts, 20) do
+                    local part = parts[i]
+                    if part and part.Parent then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end)
+    
+    table.insert(self.NoClipConnections, self.HeartbeatConnection)
+    
+    self.Enabled = true
+    self.CurrentCharacter = character
+    return true
+end
+
+function NoClipSystem:DisableNoClip()
+    if self.CurrentCharacter and self.CachedParts[self.CurrentCharacter] then
+        local parts = self.CachedParts[self.CurrentCharacter]
+        for _, part in ipairs(parts) do
+            if part and part.Parent then
+                part.CanCollide = true
+                part.CollisionGroup = "Default"
+            end
+        end
+        self.CachedParts[self.CurrentCharacter] = nil
+    end
+    
+    for _, connection in ipairs(self.NoClipConnections) do
+        if connection then
+            pcall(function() connection:Disconnect() end)
+        end
+    end
+    self.NoClipConnections = {}
+    
+    self.Enabled = false
+    self.CurrentCharacter = nil
+    self.HeartbeatConnection = nil
+    return true
+end
+
+function NoClipSystem:ToggleNoClip(character)
+    if self.Enabled and self.CurrentCharacter == character then
+        return self:DisableNoClip()
+    else
+        return self:EnableNoClip(character)
+    end
+end
+
+-- ==================== 改進的距離維持系統 ====================
+local DistanceMaintainSystem = {
+    Enabled = true,
+    IsMaintaining = false,
+    MoveSpeed = 12,
+    MinSpeed = 1.5,
+    MaxSpeed = 750,
+    MaintainThread = nil,
+    BodyVelocity = nil,
+    BodyGyro = nil,
+    BodyPosition = nil,
+    LastPosition = nil,
+    SpeedSystem = SpeedInputSystem,
+    NoClipSystem = NoClipSystem,
+    MaxForceMultiplier = 3.0,
+    UseDirectPath = true,
+    AutoNoClipEnabled = true,
+    _isInitialized = false,
+    _smoothVelocity = Vector3.zero,
+    _targetVelocity = Vector3.zero,
+    _currentTarget = nil,
+    
+    -- 距離維持相關參數
+    TargetDistance = 10,       -- 預設維持距離
+    MinDistance = 1,           -- 最小距離
+    MaxDistance = 3000,        -- 最大距離
+    Tolerance = 1.5,           -- 距離容差
+    HeightOffset = 5,          -- 高度偏移
+    SmoothFactor = 0.3,        -- 平滑係數
+    RotationSmoothness = 0.2,  -- 旋轉平滑度
+    LockHeight = false,        -- 鎖定高度功能
+    LockedHeight = 0,          -- 鎖定的高度值
+    StopVerticalDrift = true   -- 停止垂直浮動功能
+}
+
+function DistanceMaintainSystem:_createBodyMover(className, name, parent)
+    if not parent then return nil end
+    
+    local existing = parent:FindFirstChild(name)
+    if existing then
+        existing:Destroy()
+    end
+    
+    local mover = Instance.new(className)
+    mover.Name = name
+    return mover
+end
+
+function DistanceMaintainSystem:InitializeFlight()
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character
+    if not character or not character:IsDescendantOf(game) then 
+        return false, "角色無效" 
+    end
+    
+    local hrp = character:WaitForChild("HumanoidRootPart", 2)
+    if not hrp then 
+        return false, "找不到角色根節點" 
+    end
+    
+    self:CleanupFlight()
+    
+    -- 創建BodyVelocity用於水平移動
+    self.BodyVelocity = self:_createBodyMover("BodyVelocity", "FlightVelocity", hrp)
+    if not self.BodyVelocity then return false end
+    
+    self.BodyVelocity.MaxForce = Vector3.new(10000, 0, 10000) * self.MaxForceMultiplier  -- Y軸設為0，禁止上下移動
+    self.BodyVelocity.P = 1500
+    self.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    
+    -- 創建BodyPosition用於保持高度
+    self.BodyPosition = self:_createBodyMover("BodyPosition", "FlightPosition", hrp)
+    if not self.BodyPosition then return false end
+    
+    self.BodyPosition.MaxForce = Vector3.new(0, 10000, 0) * self.MaxForceMultiplier  -- 只控制Y軸
+    self.BodyPosition.P = 2000
+    self.BodyPosition.Position = hrp.Position
+    self.BodyPosition.D = 500  -- 阻尼係數
+    
+    -- 創建BodyGyro用於控制旋轉
+    self.BodyGyro = self:_createBodyMover("BodyGyro", "FlightGyro", hrp)
+    if not self.BodyGyro then return false end
+    
+    self.BodyGyro.MaxTorque = Vector3.new(10000, 10000, 10000) * self.MaxForceMultiplier
+    self.BodyGyro.P = 1500
+    self.BodyGyro.CFrame = hrp.CFrame
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.PlatformStand = true
+        
+        local animate = character:FindFirstChild("Animate")
+        if animate then
+            animate.Disabled = true
+        end
+        
+        humanoid.AutoRotate = false
+        humanoid.AutoJumpEnabled = false
+    end
+    
+    self.BodyVelocity.Parent = hrp
+    self.BodyPosition.Parent = hrp
+    self.BodyGyro.Parent = hrp
+    
+    self.MoveSpeed = self.SpeedSystem:GetAdjustedSpeed(self.SpeedSystem.CurrentSpeed)
+    
+    if self.AutoNoClipEnabled then
+        local success = self.NoClipSystem:EnableNoClip(character)
+        if not success then
+            warn("穿牆模式啟用失敗")
+        end
+    end
+    
+    self._isInitialized = true
+    self._smoothVelocity = Vector3.zero
+    self._targetVelocity = Vector3.zero
+    
+    return true
+end
+
+function DistanceMaintainSystem:CleanupFlight()
+    self._isInitialized = false
+    self.IsMaintaining = false
+    self._currentTarget = nil
+    self.LockHeight = false
+    
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character
+    
+    if character and character:IsDescendantOf(game) then
+        local velocity = character:FindFirstChild("FlightVelocity")
+        if velocity then
+            pcall(function() velocity:Destroy() end)
+        end
+        
+        local position = character:FindFirstChild("FlightPosition")
+        if position then
+            pcall(function() position:Destroy() end)
+        end
+        
+        local gyro = character:FindFirstChild("FlightGyro")
+        if gyro then
+            pcall(function() gyro:Destroy() end)
+        end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.PlatformStand = false
+            humanoid.AutoRotate = true
+            humanoid.AutoJumpEnabled = true
+            
+            local animate = character:FindFirstChild("Animate")
+            if animate then
+                animate.Disabled = false
+            end
+        end
+    end
+    
+    if self.BodyVelocity then
+        pcall(function() self.BodyVelocity:Destroy() end)
+        self.BodyVelocity = nil
+    end
+    
+    if self.BodyPosition then
+        pcall(function() self.BodyPosition:Destroy() end)
+        self.BodyPosition = nil
+    end
+    
+    if self.BodyGyro then
+        pcall(function() self.BodyGyro:Destroy() end)
+        self.BodyGyro = nil
+    end
+    
+    self.LastPosition = nil
+    
+    self.NoClipSystem:DisableNoClip()
+end
+
+function DistanceMaintainSystem:CalculateMaintainPosition(targetPosition, currentPosition)
+    -- 計算從目標到當前位置的方向
+    local toTarget = (targetPosition - currentPosition)
+    local distance = toTarget.Magnitude
+    local direction = toTarget.Unit
+    
+    -- 計算目標維持位置
+    local targetMaintainPos
+    
+    if distance > self.TargetDistance + self.Tolerance then
+        -- 太遠了，需要靠近
+        local moveDistance = distance - self.TargetDistance
+        targetMaintainPos = currentPosition + direction * math.min(moveDistance, self.MoveSpeed * 0.1)
+        
+    elseif distance < self.TargetDistance - self.Tolerance then
+        -- 太近了，需要遠離
+        targetMaintainPos = currentPosition - direction * math.min(self.TargetDistance - distance, self.MoveSpeed * 0.1)
+        
+    else
+        -- 在理想距離範圍內，保持位置
+        targetMaintainPos = currentPosition
+    end
+    
+    -- 如果鎖定高度，則使用鎖定的高度值
+    if self.LockHeight then
+        targetMaintainPos = Vector3.new(targetMaintainPos.X, self.LockedHeight, targetMaintainPos.Z)
+    else
+        -- 添加高度偏移
+        targetMaintainPos = targetMaintainPos + Vector3.new(0, self.HeightOffset, 0)
+    end
+    
+    return targetMaintainPos, distance
+end
+
+function DistanceMaintainSystem:FlyToMaintainPosition(targetPosition)
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character
+    
+    if not character or not character:IsDescendantOf(game) then 
+        return false 
+    end
+    
+    if not self.BodyVelocity or not self.BodyGyro or not self.BodyPosition then 
+        return false 
+    end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    local currentPos = hrp.Position
+    local maintainPos, currentDistance = self:CalculateMaintainPosition(targetPosition, currentPos)
+    
+    -- 計算水平方向（忽略Y軸）
+    local horizontalDirection = (Vector3.new(maintainPos.X, 0, maintainPos.Z) - Vector3.new(currentPos.X, 0, currentPos.Z))
+    local horizontalDistance = horizontalDirection.Magnitude
+    
+    -- 根據水平移動距離調整速度
+    local targetSpeed
+    if horizontalDistance < 1 then
+        targetSpeed = Vector3.zero
+    elseif horizontalDistance < 5 then
+        local speedFactor = horizontalDistance / 5
+        local horizontalDir = horizontalDirection.Unit
+        targetSpeed = horizontalDir * self.MoveSpeed * speedFactor * 0.5
+    else
+        local horizontalDir = horizontalDirection.Unit
+        targetSpeed = horizontalDir * self.MoveSpeed
+    end
+    
+    -- 平滑水平速度
+    self._smoothVelocity = self._smoothVelocity:Lerp(targetSpeed, self.SmoothFactor)
+    
+    -- 設定水平速度（Y軸設為0）
+    if self.BodyVelocity then
+        self.BodyVelocity.Velocity = Vector3.new(self._smoothVelocity.X, 0, self._smoothVelocity.Z)
+    end
+    
+    -- 設定高度位置
+    if self.BodyPosition then
+        local targetHeight
+        if self.LockHeight then
+            targetHeight = self.LockedHeight
+        else
+            targetHeight = maintainPos.Y
+        end
+        
+        -- 平滑高度變化
+        local currentHeight = hrp.Position.Y
+        local smoothHeight = currentHeight + (targetHeight - currentHeight) * 0.2
+        self.BodyPosition.Position = Vector3.new(currentPos.X, smoothHeight, currentPos.Z)
+    end
+    
+    -- 面向目標（水平方向）
+    if horizontalDistance > 0.1 and self.BodyGyro then
+        local lookDirection = (Vector3.new(targetPosition.X, 0, targetPosition.Z) - Vector3.new(currentPos.X, 0, currentPos.Z)).Unit
+        if lookDirection.Magnitude > 0.1 then
+            local currentCFrame = hrp.CFrame
+            local targetCFrame = CFrame.new(currentPos, currentPos + lookDirection)
+            local smoothedCFrame = currentCFrame:Lerp(targetCFrame, self.RotationSmoothness)
+            self.BodyGyro.CFrame = smoothedCFrame
+        end
+    end
+    
+    return true, currentDistance
+end
+
+function DistanceMaintainSystem:MaintainDistanceDirect(target)
+    if not self.Enabled or not self.IsMaintaining then return end
+    
+    local player = game:GetService("Players").LocalPlayer
+    
+    local lastUpdate = tick()
+    local UPDATE_INTERVAL = 0.016
+    
+    while self.IsMaintaining and task.wait(UPDATE_INTERVAL) do
+        if not target or not target:IsDescendantOf(game) then break end
+        if not target.Character or not target.Character:IsDescendantOf(game) then break end
+        if not player.Character or not player.Character:IsDescendantOf(game) then break end
+        
+        local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+        local myRoot = player.Character:FindFirstChild("HumanoidRootPart")
+        
+        if not targetRoot or not myRoot then break end
+        
+        local targetPos = targetRoot.Position
+        local success, currentDistance = self:FlyToMaintainPosition(targetPos)
+        
+        if not success then break end
+        
+        self.LastPosition = myRoot.Position
+        
+        -- 更新UI上的距離顯示
+        if c00ltpframe and c00ltpframe.Visible then
+            local PlayerFar = c00ltpframe:FindFirstChild("PlayerFar")
+            if PlayerFar then
+                local lockText = self.LockHeight and " (高度鎖定)" or ""
+                PlayerFar.Text = string.format("距離: %d (維持: %.1f)%s", math.floor(currentDistance + 0.5), self.TargetDistance, lockText)
+            end
+        end
+        
+        local now = tick()
+        if now - lastUpdate >= 0.16 then
+            lastUpdate = now
+        end
+    end
+    
+    self:CleanupFlight()
+end
+
+function DistanceMaintainSystem:StartMaintaining(target)
+    if self.IsMaintaining then
+        self:StopMaintaining()
+        task.wait(0.1)
+    end
+    
+    if not target or not target:IsDescendantOf(game) then
+        return false, "目標無效"
+    end
+    
+    if target == game.Players.LocalPlayer then
+        return false, "無法對自己維持距離"
+    end
+    
+    local success, err = self:InitializeFlight()
+    if not success then
+        return false, err or "飛行系統初始化失敗"
+    end
+    
+    -- 記錄初始高度
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character
+    if character and character:IsDescendantOf(game) then
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            self.LockedHeight = hrp.Position.Y
+        end
+    end
+    
+    self.IsMaintaining = true
+    self._currentTarget = target
+    
+    self.MaintainThread = task.spawn(function()
+        local protectedMaintain = function()
+            self:MaintainDistanceDirect(target)
+        end
+        
+        local maintainSuccess, maintainErr = pcall(protectedMaintain)
+        if not maintainSuccess then
+            warn("距離維持錯誤: " .. tostring(maintainErr))
+            self:CleanupFlight()
+        end
+    end)
+    
+    local lockText = self.LockHeight and " (高度鎖定)" or ""
+    return true, string.format("開始維持距離 (%.1f)%s", self.TargetDistance, lockText)
+end
+
+function DistanceMaintainSystem:StopMaintaining()
+    self.IsMaintaining = false
+    
+    if self.MaintainThread then
+        task.cancel(self.MaintainThread)
+        self.MaintainThread = nil
+    end
+    
+    self:CleanupFlight()
+    
+    return true, "停止距離維持"
+end
+
+function DistanceMaintainSystem:ToggleHeightLock()
+    self.LockHeight = not self.LockHeight
+    
+    if self.LockHeight then
+        -- 記錄當前高度
+        local player = game:GetService("Players").LocalPlayer
+        local character = player.Character
+        if character and character:IsDescendantOf(game) then
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                self.LockedHeight = hrp.Position.Y
+            end
+        end
+        return true, "高度鎖定已啟用"
+    else
+        return true, "高度鎖定已關閉"
+    end
+end
+
+function DistanceMaintainSystem:AdjustSpeed(amount)
+    local targetSpeed = self.MoveSpeed + amount
+    local minSpeed = self.SpeedSystem:GetAdjustedSpeed(self.SpeedSystem.MinSafeSpeed)
+    local maxSpeed = self.SpeedSystem:GetAdjustedSpeed(self.SpeedSystem.MaxSafeSpeed)
+    
+    targetSpeed = math.clamp(targetSpeed, minSpeed, maxSpeed)
+    
+    local smoothFactor = 0.2
+    self.MoveSpeed = self.MoveSpeed + (targetSpeed - self.MoveSpeed) * smoothFactor
+    
+    local originalSpeed = self.MoveSpeed / self.SpeedSystem.SpeedScale
+    self.SpeedSystem.CurrentSpeed = math.max(1, math.floor(originalSpeed))
+    
+    return self.MoveSpeed
+end
+
+function DistanceMaintainSystem:SetSpeedDirectly(speed)
+    if speed < SpeedInputSystem.MinSafeSpeed or speed > SpeedInputSystem.MaxSafeSpeed then
+        return false, "速度超出範圍"
+    end
+    
+    SpeedInputSystem.CurrentSpeed = speed
+    self.MoveSpeed = SpeedInputSystem:GetAdjustedSpeed(speed)
+    return true, string.format("速度已設為: %d", speed)
+end
+
+function DistanceMaintainSystem:SetDistanceDirectly(distance)
+    if distance < self.MinDistance or distance > self.MaxDistance then
+        return false, string.format("距離必須在 %.1f 到 %.1f 之間", self.MinDistance, self.MaxDistance)
+    end
+    
+    self.TargetDistance = distance
+    return true, string.format("維持距離已設為: %.1f", distance)
+end
+
+-- ==================== UI界面創建 ====================
+local c00ltpgui = Instance.new("ScreenGui")
+c00ltpgui.Name = "c00ltpgui"
+c00ltpgui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+c00ltpgui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+c00ltpgui.ResetOnSpawn = false
+
+local c00ltpframe = Instance.new("Frame")
+c00ltpframe.Name = "c00ltpframe"
+c00ltpframe.Parent = c00ltpgui
+c00ltpframe.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+c00ltpframe.BackgroundTransparency = 0.500
+c00ltpframe.BorderColor3 = Color3.fromRGB(0, 255, 0)
+c00ltpframe.BorderSizePixel = 6
+c00ltpframe.Position = UDim2.new(0.02, 0, 0.05, 0)
+c00ltpframe.Size = UDim2.new(0.35, 0, 0.55, 0) -- 增加高度
+c00ltpframe.Visible = true
+
+-- 玩家頭像
+local PlayerProfiles = Instance.new("ImageLabel")
+PlayerProfiles.Name = "PlayerProfiles"
+PlayerProfiles.Parent = c00ltpframe
+PlayerProfiles.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+PlayerProfiles.BorderColor3 = Color3.fromRGB(0, 255, 0)
+PlayerProfiles.BorderSizePixel = 2
+PlayerProfiles.Position = UDim2.new(0.03, 0, 0.08, 0)
+PlayerProfiles.Size = UDim2.new(0.25, 0, 0.45, 0)
+PlayerProfiles.Image = "rbxassetid://12222223187"
+
+-- 玩家名字
+local PlayerName = Instance.new("TextLabel")
+PlayerName.Name = "PlayerName"
+PlayerName.Parent = c00ltpframe
+PlayerName.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PlayerName.BackgroundTransparency = 0.500
+PlayerName.BorderColor3 = Color3.fromRGB(0, 255, 0)
+PlayerName.BorderSizePixel = 3
+PlayerName.Position = UDim2.new(0.30, 0, 0.08, 0)
+PlayerName.Size = UDim2.new(0.67, 0, 0.12, 0)
+PlayerName.Font = Enum.Font.SourceSansBold
+PlayerName.Text = "請選擇玩家"
+PlayerName.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerName.TextScaled = true
+PlayerName.TextSize = 40.000
+PlayerName.TextWrapped = true
+
+local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
+UITextSizeConstraint.Parent = PlayerName
+UITextSizeConstraint.MaxTextSize = 40
+
+-- 玩家ID
+local PlayerIDs = Instance.new("TextLabel")
+PlayerIDs.Name = "PlayerIDs"
+PlayerIDs.Parent = c00ltpframe
+PlayerIDs.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PlayerIDs.BackgroundTransparency = 0.500
+PlayerIDs.BorderColor3 = Color3.fromRGB(0, 255, 0)
+PlayerIDs.BorderSizePixel = 3
+PlayerIDs.Position = UDim2.new(0.30, 0, 0.22, 0)
+PlayerIDs.Size = UDim2.new(0.38, 0, 0.08, 0)
+PlayerIDs.Font = Enum.Font.SourceSansBold
+PlayerIDs.Text = "ID: -"
+PlayerIDs.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerIDs.TextScaled = true
+PlayerIDs.TextSize = 30.000
+PlayerIDs.TextWrapped = true
+
+local UITextSizeConstraint_2 = Instance.new("UITextSizeConstraint")
+UITextSizeConstraint_2.Parent = PlayerIDs
+UITextSizeConstraint_2.MaxTextSize = 30
+
+-- 距離顯示
+local PlayerFar = Instance.new("TextLabel")
+PlayerFar.Name = "PlayerFar"
+PlayerFar.Parent = c00ltpframe
+PlayerFar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PlayerFar.BackgroundTransparency = 0.500
+PlayerFar.BorderColor3 = Color3.fromRGB(0, 255, 0)
+PlayerFar.BorderSizePixel = 3
+PlayerFar.Position = UDim2.new(0.70, 0, 0.22, 0)
+PlayerFar.Size = UDim2.new(0.27, 0, 0.08, 0)
+PlayerFar.Font = Enum.Font.SourceSansBold
+PlayerFar.Text = "距離: -"
+PlayerFar.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerFar.TextScaled = true
+PlayerFar.TextSize = 30.000
+PlayerFar.TextWrapped = true
+
+local UITextSizeConstraint_3 = Instance.new("UITextSizeConstraint")
+UITextSizeConstraint_3.Parent = PlayerFar
+UITextSizeConstraint_3.MaxTextSize = 30
+
+-- 維持距離按鈕
+local MaintainButton = Instance.new("ImageButton")
+MaintainButton.Name = "MaintainButton"
+MaintainButton.Parent = c00ltpframe
+MaintainButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MaintainButton.BackgroundTransparency = 0.500
+MaintainButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+MaintainButton.BorderSizePixel = 3
+MaintainButton.Position = UDim2.new(1.02, 0, 0.08, 0)
+MaintainButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+MaintainButton.Image = "rbxassetid://7072725342"
+
+-- 跳過按鈕
+local SkipButton = Instance.new("ImageButton")
+SkipButton.Name = "SkipButton"
+SkipButton.Parent = c00ltpframe
+SkipButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SkipButton.BackgroundTransparency = 0.500
+SkipButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+SkipButton.BorderSizePixel = 3
+SkipButton.Position = UDim2.new(1.02, 0, 0.26, 0)
+SkipButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+SkipButton.Image = "rbxassetid://11283329347"
+
+-- 自動穿牆按鈕
+local AutoNoClipButton = Instance.new("TextButton")
+AutoNoClipButton.Name = "AutoNoClipButton"
+AutoNoClipButton.Parent = c00ltpframe
+AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
+AutoNoClipButton.BackgroundTransparency = 0.500
+AutoNoClipButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+AutoNoClipButton.BorderSizePixel = 3
+AutoNoClipButton.Position = UDim2.new(1.02, 0, 0.44, 0)
+AutoNoClipButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+AutoNoClipButton.Font = Enum.Font.SourceSansBold
+AutoNoClipButton.Text = "飛行穿牆: ✓"
+AutoNoClipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoNoClipButton.TextScaled = true
+AutoNoClipButton.TextSize = 25.000
+AutoNoClipButton.TextWrapped = true
+
+-- 直線飛行按鈕
+local DirectPathButton = Instance.new("TextButton")
+DirectPathButton.Name = "DirectPathButton"
+DirectPathButton.Parent = c00ltpframe
+DirectPathButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+DirectPathButton.BackgroundTransparency = 0.500
+DirectPathButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+DirectPathButton.BorderSizePixel = 3
+DirectPathButton.Position = UDim2.new(1.02, 0, 0.62, 0)
+DirectPathButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+DirectPathButton.Font = Enum.Font.SourceSansBold
+DirectPathButton.Text = "直線飛行: ✓"
+DirectPathButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DirectPathButton.TextScaled = true
+
+-- 高度鎖定按鈕 (新增)
+local HeightLockButton = Instance.new("TextButton")
+HeightLockButton.Name = "HeightLockButton"
+HeightLockButton.Parent = c00ltpframe
+HeightLockButton.BackgroundColor3 = Color3.fromRGB(180, 120, 255)
+HeightLockButton.BackgroundTransparency = 0.500
+HeightLockButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+HeightLockButton.BorderSizePixel = 3
+HeightLockButton.Position = UDim2.new(1.02, 0, 0.80, 0)
+HeightLockButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+HeightLockButton.Font = Enum.Font.SourceSansBold
+HeightLockButton.Text = "高度鎖定: ✗"
+HeightLockButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightLockButton.TextScaled = true
+
+-- 玩家列表按鈕
+local PlayersListButton = Instance.new("TextButton")
+PlayersListButton.Name = "PlayersListButton"
+PlayersListButton.Parent = c00ltpframe
+PlayersListButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+PlayersListButton.BackgroundTransparency = 0.500
+PlayersListButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+PlayersListButton.BorderSizePixel = 3
+PlayersListButton.Position = UDim2.new(1.28, 0, 0.08, 0)
+PlayersListButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+PlayersListButton.Font = Enum.Font.SourceSansBold
+PlayersListButton.Text = "玩家列表"
+PlayersListButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayersListButton.TextScaled = true
+
+-- 停止維持按鈕
+local StopMaintainButton = Instance.new("TextButton")
+StopMaintainButton.Name = "StopMaintainButton"
+StopMaintainButton.Parent = c00ltpframe
+StopMaintainButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+StopMaintainButton.BackgroundTransparency = 0.500
+StopMaintainButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+StopMaintainButton.BorderSizePixel = 3
+StopMaintainButton.Position = UDim2.new(1.28, 0, 0.26, 0)
+StopMaintainButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+StopMaintainButton.Font = Enum.Font.SourceSansBold
+StopMaintainButton.Text = "停止維持"
+StopMaintainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+StopMaintainButton.TextScaled = true
+
+-- 縮小按鈕
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Parent = c00ltpframe
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 200, 100)
+MinimizeButton.BackgroundTransparency = 0.500
+MinimizeButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+MinimizeButton.BorderSizePixel = 3
+MinimizeButton.Position = UDim2.new(1.28, 0, 0.44, 0)
+MinimizeButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+MinimizeButton.Font = Enum.Font.SourceSansBold
+MinimizeButton.Text = "縮小"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextScaled = true
+
+-- 關閉按鈕
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = c00ltpframe
+CloseButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+CloseButton.BackgroundTransparency = 0.500
+CloseButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+CloseButton.BorderSizePixel = 3
+CloseButton.Position = UDim2.new(0.70, 0, 0.94, 0)
+CloseButton.Size = UDim2.new(0.29, 0, 0.05, 0)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.Text = "關閉視窗"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextScaled = true
+CloseButton.TextSize = 20.000
+CloseButton.TextWrapped = true
+
+local UITextSizeConstraint_4 = Instance.new("UITextSizeConstraint")
+UITextSizeConstraint_4.Parent = CloseButton
+UITextSizeConstraint_4.MaxTextSize = 20
+
+-- 標題
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Parent = c00ltpframe
+Title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Title.BackgroundTransparency = 0.500
+Title.BorderColor3 = Color3.fromRGB(0, 255, 0)
+Title.BorderSizePixel = 3
+Title.Position = UDim2.new(0, 0, -0.10, 0)
+Title.Size = UDim2.new(0.68, 0, 0.09, 0)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "距離維持系統"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextScaled = true
+Title.TextSize = 50.000
+Title.TextWrapped = true
+Title.TextStrokeColor3 = Color3.fromRGB(0, 255, 0)
+Title.TextStrokeTransparency = 0.2
+Title.TextXAlignment = Enum.TextXAlignment.Center
+
+local UITextSizeConstraint_5 = Instance.new("UITextSizeConstraint")
+UITextSizeConstraint_5.Parent = Title
+UITextSizeConstraint_5.MaxTextSize = 50
+
+-- ==================== 速度控制區 ====================
+local SpeedControlFrame = Instance.new("Frame")
+SpeedControlFrame.Name = "SpeedControlFrame"
+SpeedControlFrame.Parent = c00ltpframe
+SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SpeedControlFrame.BackgroundTransparency = 0.3
+SpeedControlFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
+SpeedControlFrame.BorderSizePixel = 2
+SpeedControlFrame.Position = UDim2.new(0.30, 0, 0.32, 0)
+SpeedControlFrame.Size = UDim2.new(0.67, 0, 0.18, 0)
+SpeedControlFrame.Visible = true
+
+-- 速度標籤
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Name = "SpeedLabel"
+SpeedLabel.Parent = SpeedControlFrame
+SpeedLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpeedLabel.BackgroundTransparency = 0.5
+SpeedLabel.BorderColor3 = Color3.fromRGB(0, 255, 0)
+SpeedLabel.BorderSizePixel = 2
+SpeedLabel.Position = UDim2.new(0.02, 0, 0.1, 0)
+SpeedLabel.Size = UDim2.new(0.25, 0, 0.8, 0)
+SpeedLabel.Font = Enum.Font.SourceSansBold
+SpeedLabel.Text = "速度"
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.TextScaled = true
+SpeedLabel.TextWrapped = true
+
+-- 速度輸入框
+local SpeedInputBox = Instance.new("TextBox")
+SpeedInputBox.Name = "SpeedInputBox"
+SpeedInputBox.Parent = SpeedControlFrame
+SpeedInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpeedInputBox.BackgroundTransparency = 0.3
+SpeedInputBox.BorderColor3 = Color3.fromRGB(0, 255, 0)
+SpeedInputBox.BorderSizePixel = 2
+SpeedInputBox.Position = UDim2.new(0.29, 0, 0.1, 0)
+SpeedInputBox.Size = UDim2.new(0.4, 0, 0.8, 0)
+SpeedInputBox.Font = Enum.Font.SourceSans
+SpeedInputBox.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
+SpeedInputBox.PlaceholderText = "1-500"
+SpeedInputBox.Text = "8"
+SpeedInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedInputBox.TextScaled = true
+SpeedInputBox.TextWrapped = true
+SpeedInputBox.ClearTextOnFocus = false
+
+-- 速度設定按鈕
+local SetSpeedButton = Instance.new("TextButton")
+SetSpeedButton.Name = "SetSpeedButton"
+SetSpeedButton.Parent = SpeedControlFrame
+SetSpeedButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+SetSpeedButton.BackgroundTransparency = 0.5
+SetSpeedButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+SetSpeedButton.BorderSizePixel = 2
+SetSpeedButton.Position = UDim2.new(0.71, 0, 0.1, 0)
+SetSpeedButton.Size = UDim2.new(0.27, 0, 0.8, 0)
+SetSpeedButton.Font = Enum.Font.SourceSansBold
+SetSpeedButton.Text = "設定"
+SetSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SetSpeedButton.TextScaled = true
+SetSpeedButton.TextWrapped = true
+
+-- ==================== 距離控制區 ====================
+local DistanceControlFrame = Instance.new("Frame")
+DistanceControlFrame.Name = "DistanceControlFrame"
+DistanceControlFrame.Parent = c00ltpframe
+DistanceControlFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+DistanceControlFrame.BackgroundTransparency = 0.3
+DistanceControlFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
+DistanceControlFrame.BorderSizePixel = 2
+DistanceControlFrame.Position = UDim2.new(0.30, 0, 0.52, 0)
+DistanceControlFrame.Size = UDim2.new(0.67, 0, 0.18, 0)
+DistanceControlFrame.Visible = true
+
+-- 距離標籤
+local DistanceLabel = Instance.new("TextLabel")
+DistanceLabel.Name = "DistanceLabel"
+DistanceLabel.Parent = DistanceControlFrame
+DistanceLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DistanceLabel.BackgroundTransparency = 0.5
+DistanceLabel.BorderColor3 = Color3.fromRGB(0, 255, 0)
+DistanceLabel.BorderSizePixel = 2
+DistanceLabel.Position = UDim2.new(0.02, 0, 0.1, 0)
+DistanceLabel.Size = UDim2.new(0.25, 0, 0.8, 0)
+DistanceLabel.Font = Enum.Font.SourceSansBold
+DistanceLabel.Text = "距離"
+DistanceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+DistanceLabel.TextScaled = true
+DistanceLabel.TextWrapped = true
+
+-- 距離輸入框
+local DistanceInputBox = Instance.new("TextBox")
+DistanceInputBox.Name = "DistanceInputBox"
+DistanceInputBox.Parent = DistanceControlFrame
+DistanceInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DistanceInputBox.BackgroundTransparency = 0.3
+DistanceInputBox.BorderColor3 = Color3.fromRGB(0, 255, 0)
+DistanceInputBox.BorderSizePixel = 2
+DistanceInputBox.Position = UDim2.new(0.29, 0, 0.1, 0)
+DistanceInputBox.Size = UDim2.new(0.4, 0, 0.8, 0)
+DistanceInputBox.Font = Enum.Font.SourceSans
+DistanceInputBox.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
+DistanceInputBox.PlaceholderText = "1-3000"
+DistanceInputBox.Text = "10.0"
+DistanceInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+DistanceInputBox.TextScaled = true
+DistanceInputBox.TextWrapped = true
+DistanceInputBox.ClearTextOnFocus = false
+
+-- 距離設定按鈕
+local SetDistanceButton = Instance.new("TextButton")
+SetDistanceButton.Name = "SetDistanceButton"
+SetDistanceButton.Parent = DistanceControlFrame
+SetDistanceButton.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+SetDistanceButton.BackgroundTransparency = 0.5
+SetDistanceButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+SetDistanceButton.BorderSizePixel = 2
+SetDistanceButton.Position = UDim2.new(0.71, 0, 0.1, 0)
+SetDistanceButton.Size = UDim2.new(0.27, 0, 0.8, 0)
+SetDistanceButton.Font = Enum.Font.SourceSansBold
+SetDistanceButton.Text = "設定"
+SetDistanceButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SetDistanceButton.TextScaled = true
+SetDistanceButton.TextWrapped = true
+
+-- ==================== 玩家選擇系統 ====================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local currentSelectedPlayer = nil
+local playerSelectionFrame = nil
+local isMinimized = false
+
+-- 更新玩家資訊顯示
+local function updatePlayerInfo(player)
+    if player then
+        PlayerName.Text = player.Name
+        PlayerIDs.Text = string.format("ID: %d", player.UserId)
+        
+        -- 獲取玩家頭像
+        local success, result = pcall(function()
+            return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+        end)
+        
+        if success and result then
+            PlayerProfiles.Image = result
+        else
+            PlayerProfiles.Image = "rbxassetid://12222223187"
+        end
+        
+        -- 更新維持按鈕狀態
+        if DistanceMaintainSystem.IsMaintaining and DistanceMaintainSystem._currentTarget == player then
+            MaintainButton.Image = "rbxassetid://7072725343" -- 停止圖標
+        else
+            MaintainButton.Image = "rbxassetid://7072725342" -- 維持圖標
+        end
+    else
+        PlayerName.Text = "請選擇玩家"
+        PlayerIDs.Text = "ID: -"
+        PlayerFar.Text = "距離: -"
+        PlayerProfiles.Image = "rbxassetid://12222223187"
+    end
+end
+
+-- 更新距離顯示
+local function updateDistance()
+    if not currentSelectedPlayer then 
+        PlayerFar.Text = "距離: -"
+        return 
+    end
+    
+    local targetChar = currentSelectedPlayer.Character
+    local localChar = LocalPlayer.Character
+    
+    if targetChar and localChar then
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        local localRoot = localChar:FindFirstChild("HumanoidRootPart")
+        
+        if targetRoot and localRoot then
+            local distance = (targetRoot.Position - localRoot.Position).Magnitude
+            if DistanceMaintainSystem.IsMaintaining and DistanceMaintainSystem._currentTarget == currentSelectedPlayer then
+                local lockText = DistanceMaintainSystem.LockHeight and " (高度鎖定)" or ""
+                PlayerFar.Text = string.format("距離: %d (維持: %.1f)%s", math.floor(distance + 0.5), DistanceMaintainSystem.TargetDistance, lockText)
+            else
+                PlayerFar.Text = string.format("距離: %d", math.floor(distance + 0.5))
+            end
+        else
+            PlayerFar.Text = "距離: -"
+        end
+    else
+        PlayerFar.Text = "距離: -"
+    end
+end
+
+-- 創建玩家選擇列表
+local function createPlayerSelection()
+    if playerSelectionFrame and playerSelectionFrame.Parent then
+        playerSelectionFrame:Destroy()
+        return
+    end
+    
+    playerSelectionFrame = Instance.new("Frame")
+    playerSelectionFrame.Name = "PlayerSelectionFrame"
+    playerSelectionFrame.Parent = c00ltpgui
+    playerSelectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    playerSelectionFrame.BackgroundTransparency = 0.2
+    playerSelectionFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    playerSelectionFrame.BorderSizePixel = 3
+    playerSelectionFrame.Position = UDim2.new(0.38, 0, 0.05, 0)
+    playerSelectionFrame.Size = UDim2.new(0.3, 0, 0.5, 0)
+    playerSelectionFrame.Visible = true
+    playerSelectionFrame.ZIndex = 10
+    
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Parent = playerSelectionFrame
+    title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    title.BackgroundTransparency = 0.5
+    title.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    title.BorderSizePixel = 2
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.Size = UDim2.new(1, 0, 0.1, 0)
+    title.Font = Enum.Font.SourceSansBold
+    title.Text = "選擇玩家"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextScaled = true
+    
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Parent = playerSelectionFrame
+    closeButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+    closeButton.BackgroundTransparency = 0.5
+    closeButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    closeButton.BorderSizePixel = 2
+    closeButton.Position = UDim2.new(0.9, 0, 0.02, 0)
+    closeButton.Size = UDim2.new(0.08, 0, 0.06, 0)
+    closeButton.Font = Enum.Font.SourceSansBold
+    closeButton.Text = "X"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextScaled = true
+    
+    closeButton.MouseButton1Click:Connect(function()
+        playerSelectionFrame:Destroy()
+        playerSelectionFrame = nil
+    end)
+    
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Name = "PlayerScrollFrame"
+    scrollFrame.Parent = playerSelectionFrame
+    scrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    scrollFrame.BackgroundTransparency = 0.3
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.Position = UDim2.new(0.02, 0, 0.12, 0)
+    scrollFrame.Size = UDim2.new(0.96, 0, 0.86, 0)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scrollFrame.ScrollBarThickness = 8
+    
+    local playerListLayout = Instance.new("UIListLayout")
+    playerListLayout.Parent = scrollFrame
+    playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    playerListLayout.Padding = UDim.new(0, 5)
+    
+    -- 獲取所有玩家
+    local allPlayers = Players:GetPlayers()
+    local playerCount = 0
+    
+    for _, player in ipairs(allPlayers) do
+        if player ~= LocalPlayer then
+            playerCount = playerCount + 1
+            
+            local playerButton = Instance.new("TextButton")
+            playerButton.Name = "PlayerButton_" .. player.Name
+            playerButton.Parent = scrollFrame
+            playerButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            playerButton.BackgroundTransparency = 0.5
+            playerButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+            playerButton.BorderSizePixel = 2
+            playerButton.Size = UDim2.new(0.96, 0, 0, 50)
+            playerButton.Font = Enum.Font.SourceSans
+            playerButton.Text = player.Name
+            playerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            playerButton.TextScaled = true
+            
+            playerButton.MouseButton1Click:Connect(function()
+                currentSelectedPlayer = player
+                updatePlayerInfo(player)
+                if playerSelectionFrame then
+                    playerSelectionFrame:Destroy()
+                    playerSelectionFrame = nil
+                end
+            end)
+        end
+    end
+    
+    -- 更新滾動區域大小
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, playerCount * 55)
+    
+    if playerCount == 0 then
+        local noPlayersLabel = Instance.new("TextLabel")
+        noPlayersLabel.Name = "NoPlayersLabel"
+        noPlayersLabel.Parent = scrollFrame
+        noPlayersLabel.BackgroundTransparency = 1
+        noPlayersLabel.Size = UDim2.new(1, 0, 0, 50)
+        noPlayersLabel.Font = Enum.Font.SourceSans
+        noPlayersLabel.Text = "沒有其他玩家"
+        noPlayersLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        noPlayersLabel.TextScaled = true
+    end
+end
+
+-- 切換縮小/展開狀態
+local function toggleMinimize()
+    isMinimized = not isMinimized
+    
+    if isMinimized then
+        -- 縮小狀態：非常小的界面
+        c00ltpframe.Size = UDim2.new(0.15, 0, 0.12, 0)
+        SpeedControlFrame.Visible = false
+        DistanceControlFrame.Visible = false
+        PlayerProfiles.Visible = false
+        PlayerName.Visible = false
+        PlayerIDs.Visible = false
+        PlayerFar.Visible = false
+        Title.Visible = false
+        
+        -- 重新定位和調整按鈕為更小的尺寸
+        MaintainButton.Position = UDim2.new(0.02, 0, 0.15, 0)
+        MaintainButton.Size = UDim2.new(0.46, 0, 0.35, 0)
+        
+        PlayersListButton.Position = UDim2.new(0.52, 0, 0.15, 0)
+        PlayersListButton.Size = UDim2.new(0.46, 0, 0.35, 0)
+        
+        MinimizeButton.Position = UDim2.new(0.02, 0, 0.55, 0)
+        MinimizeButton.Size = UDim2.new(0.96, 0, 0.35, 0)
+        MinimizeButton.Text = "展開"
+        
+        -- 隱藏其他按鈕
+        StopMaintainButton.Visible = false
+        AutoNoClipButton.Visible = false
+        DirectPathButton.Visible = false
+        HeightLockButton.Visible = false
+        SkipButton.Visible = false
+        
+        CloseButton.Position = UDim2.new(0, 0, 0, 0)
+        CloseButton.Size = UDim2.new(0.15, 0, 0.15, 0)
+        CloseButton.Text = "X"
+    else
+        -- 展開狀態：顯示所有內容
+        c00ltpframe.Size = UDim2.new(0.35, 0, 0.55, 0)
+        SpeedControlFrame.Visible = true
+        DistanceControlFrame.Visible = true
+        PlayerProfiles.Visible = true
+        PlayerName.Visible = true
+        PlayerIDs.Visible = true
+        PlayerFar.Visible = true
+        Title.Visible = true
+        
+        -- 恢復按鈕位置
+        MaintainButton.Position = UDim2.new(1.02, 0, 0.08, 0)
+        MaintainButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        
+        PlayersListButton.Position = UDim2.new(1.28, 0, 0.08, 0)
+        PlayersListButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        
+        MinimizeButton.Text = "縮小"
+        MinimizeButton.Position = UDim2.new(1.28, 0, 0.44, 0)
+        MinimizeButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        
+        -- 顯示其他按鈕
+        StopMaintainButton.Visible = true
+        AutoNoClipButton.Visible = true
+        DirectPathButton.Visible = true
+        HeightLockButton.Visible = true
+        SkipButton.Visible = true
+        
+        CloseButton.Position = UDim2.new(0.70, 0, 0.94, 0)
+        CloseButton.Size = UDim2.new(0.29, 0, 0.05, 0)
+        CloseButton.Text = "關閉視窗"
+    end
+end
+
+-- ==================== 速度控制功能實現 ====================
+local function updateSpeedDisplay()
+    SpeedInputBox.Text = tostring(SpeedInputSystem.CurrentSpeed)
+    DistanceMaintainSystem.MoveSpeed = SpeedInputSystem:GetAdjustedSpeed(SpeedInputSystem.CurrentSpeed)
+end
+
+-- 速度輸入框焦點事件
+SpeedInputBox.Focused:Connect(function()
+    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+end)
+
+SpeedInputBox.FocusLost:Connect(function()
+    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    -- 失去焦點時自動更新
+    local inputText = SpeedInputBox.Text
+    if inputText and inputText ~= "" then
+        local success, message = SpeedInputSystem:SetSpeedByInput(inputText)
+        if success then
+            updateSpeedDisplay()
+            SpeedInputBox.PlaceholderText = "速度已設定"
+        else
+            SpeedInputBox.PlaceholderText = message
+        end
+        task.wait(1)
+        SpeedInputBox.PlaceholderText = "1-500"
+    end
+end)
+
+-- 速度設定按鈕事件
+SetSpeedButton.MouseButton1Click:Connect(function()
+    local inputText = SpeedInputBox.Text
+    local success, message = SpeedInputSystem:SetSpeedByInput(inputText)
+    
+    if success then
+        updateSpeedDisplay()
+        SpeedInputBox.PlaceholderText = "速度已設定"
+    else
+        local originalText = SpeedInputBox.Text
+        SpeedInputBox.Text = ""
+        SpeedInputBox.PlaceholderText = message
+        task.wait(1.5)
+        SpeedInputBox.Text = originalText
+        SpeedInputBox.PlaceholderText = "1-500"
+    end
+end)
+
+-- ==================== 距離控制功能實現 ====================
+local function updateDistanceDisplay()
+    DistanceInputBox.Text = string.format("%.1f", DistanceMaintainSystem.TargetDistance)
+end
+
+-- 距離輸入框焦點事件
+DistanceInputBox.Focused:Connect(function()
+    DistanceInputBox.BackgroundColor3 = Color3.fromRGB(30, 60, 30)
+end)
+
+DistanceInputBox.FocusLost:Connect(function()
+    DistanceInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    -- 失去焦點時自動更新
+    local inputText = DistanceInputBox.Text
+    if inputText and inputText ~= "" then
+        local distanceNumber = tonumber(inputText)
+        if distanceNumber then
+            local success, message = DistanceMaintainSystem:SetDistanceDirectly(distanceNumber)
+            if success then
+                updateDistanceDisplay()
+                updateDistance()
+                DistanceInputBox.PlaceholderText = "距離已設定"
+            else
+                DistanceInputBox.PlaceholderText = message
+            end
+        else
+            DistanceInputBox.PlaceholderText = "請輸入數字"
+        end
+        task.wait(1)
+        DistanceInputBox.PlaceholderText = "1-3000"
+    end
+end)
+
+-- 距離設定按鈕事件
+SetDistanceButton.MouseButton1Click:Connect(function()
+    local inputText = DistanceInputBox.Text
+    if not inputText or inputText == "" then
+        DistanceInputBox.PlaceholderText = "請輸入距離"
+        task.wait(1)
+        DistanceInputBox.PlaceholderText = "1-3000"
+        return
+    end
+    
+    local distanceNumber = tonumber(inputText)
+    if not distanceNumber then
+        DistanceInputBox.PlaceholderText = "請輸入有效的數字"
+        task.wait(1.5)
+        DistanceInputBox.PlaceholderText = "1-3000"
+        return
+    end
+    
+    local success, message = DistanceMaintainSystem:SetDistanceDirectly(distanceNumber)
+    if success then
+        updateDistanceDisplay()
+        updateDistance()
+        DistanceInputBox.PlaceholderText = "距離已設定"
+    else
+        local originalText = DistanceInputBox.Text
+        DistanceInputBox.Text = ""
+        DistanceInputBox.PlaceholderText = message
+        task.wait(1.5)
+        DistanceInputBox.Text = originalText
+        DistanceInputBox.PlaceholderText = "1-3000"
+    end
+end)
+
+-- ==================== 高度鎖定功能實現 ====================
+-- 高度鎖定按鈕事件
+HeightLockButton.MouseButton1Click:Connect(function()
+    local success, message = DistanceMaintainSystem:ToggleHeightLock()
+    if success then
+        if DistanceMaintainSystem.LockHeight then
+            HeightLockButton.BackgroundColor3 = Color3.fromRGB(120, 60, 255)
+            HeightLockButton.Text = "高度鎖定: ✓"
+        else
+            HeightLockButton.BackgroundColor3 = Color3.fromRGB(180, 120, 255)
+            HeightLockButton.Text = "高度鎖定: ✗"
+        end
+        updateDistance()
+    end
+end)
+
+-- ==================== 主控制功能 ====================
+-- 玩家列表按鈕
+PlayersListButton.MouseButton1Click:Connect(function()
+    createPlayerSelection()
+end)
+
+-- 維持距離按鈕事件
+MaintainButton.MouseButton1Click:Connect(function()
+    if not currentSelectedPlayer then
+        createPlayerSelection()
+        return
+    end
+    
+    if DistanceMaintainSystem.IsMaintaining and DistanceMaintainSystem._currentTarget == currentSelectedPlayer then
+        -- 如果正在對當前選擇的玩家維持距離，則停止
+        DistanceMaintainSystem:StopMaintaining()
+        MaintainButton.Image = "rbxassetid://7072725342" -- 切換回維持圖標
+    else
+        -- 開始對新玩家維持距離
+        local success, message = DistanceMaintainSystem:StartMaintaining(currentSelectedPlayer)
+        if success then
+            MaintainButton.Image = "rbxassetid://7072725343" -- 切換到停止圖標
+        else
+            warn(message)
+        end
+    end
+    
+    updatePlayerInfo(currentSelectedPlayer)
+end)
+
+-- 停止維持按鈕
+StopMaintainButton.MouseButton1Click:Connect(function()
+    DistanceMaintainSystem:StopMaintaining()
+    if currentSelectedPlayer then
+        updatePlayerInfo(currentSelectedPlayer)
+    end
+end)
+
+-- 縮小按鈕事件
+MinimizeButton.MouseButton1Click:Connect(function()
+    toggleMinimize()
+end)
+
+-- 關閉按鈕事件
+CloseButton.MouseButton1Click:Connect(function()
+    DistanceMaintainSystem:StopMaintaining()
+    c00ltpframe.Visible = false
+end)
+
+-- 自動穿牆按鈕事件
+AutoNoClipButton.MouseButton1Click:Connect(function()
+    DistanceMaintainSystem.AutoNoClipEnabled = not DistanceMaintainSystem.AutoNoClipEnabled
+    if DistanceMaintainSystem.AutoNoClipEnabled then
+        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
+        AutoNoClipButton.Text = "飛行穿牆: ✓"
+    else
+        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+        AutoNoClipButton.Text = "飛行穿牆: ✗"
+    end
+end)
+
+-- 直線飛行按鈕事件
+DirectPathButton.MouseButton1Click:Connect(function()
+    DistanceMaintainSystem.UseDirectPath = not DistanceMaintainSystem.UseDirectPath
+    if DistanceMaintainSystem.UseDirectPath then
+        DirectPathButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+        DirectPathButton.Text = "直線飛行: ✓"
+    else
+        DirectPathButton.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
+        DirectPathButton.Text = "直線飛行: ✗"
+    end
+end)
+
+-- 跳過按鈕事件
+SkipButton.MouseButton1Click:Connect(function()
+    if not currentSelectedPlayer then
+        createPlayerSelection()
+        return
+    end
+    
+    -- 跳過到下一玩家
+    local allPlayers = Players:GetPlayers()
+    local currentIndex = nil
+    
+    -- 找到當前選擇玩家的索引
+    for i, player in ipairs(allPlayers) do
+        if player == currentSelectedPlayer then
+            currentIndex = i
+            break
+        end
+    end
+    
+    if currentIndex then
+        -- 找下一個非自己的玩家
+        local nextPlayer = nil
+        for i = currentIndex + 1, #allPlayers do
+            if allPlayers[i] ~= LocalPlayer then
+                nextPlayer = allPlayers[i]
+                break
+            end
+        end
+        
+        -- 如果沒有找到，從頭開始找
+        if not nextPlayer then
+            for i, player in ipairs(allPlayers) do
+                if player ~= LocalPlayer and player ~= currentSelectedPlayer then
+                    nextPlayer = player
+                    break
+                end
+            end
+        end
+        
+        if nextPlayer then
+            currentSelectedPlayer = nextPlayer
+            updatePlayerInfo(nextPlayer)
+        else
+            warn("沒有其他玩家可以跳過")
+        end
+    end
+end)
+
+-- ==================== 自動更新距離 ====================
+local distanceUpdateThread = task.spawn(function()
+    while task.wait(0.5) do
+        if c00ltpframe.Visible and not isMinimized then
+            updateDistance()
+        end
+    end
+end)
+
+-- ==================== 玩家加入/離開處理 ====================
+Players.PlayerAdded:Connect(function(player)
+    if currentSelectedPlayer == nil then
+        -- 如果有新玩家加入且當前未選擇玩家，自動選擇第一個其他玩家
+        if player ~= LocalPlayer then
+            currentSelectedPlayer = player
+            updatePlayerInfo(player)
+        end
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if currentSelectedPlayer == player then
+        -- 如果當前選擇的玩家離開，選擇其他玩家
+        local allPlayers = Players:GetPlayers()
+        local newPlayer = nil
+        
+        for _, p in ipairs(allPlayers) do
+            if p ~= LocalPlayer and p ~= player then
+                newPlayer = p
+                break
+            end
+        end
+        
+        currentSelectedPlayer = newPlayer
+        updatePlayerInfo(newPlayer)
+        
+        -- 如果正在對該玩家維持距離，停止維持
+        if DistanceMaintainSystem.IsMaintaining and DistanceMaintainSystem._currentTarget == player then
+            DistanceMaintainSystem:StopMaintaining()
+        end
+    end
+end)
+
+-- 初始選擇一個玩家
+local function initializePlayerSelection()
+    local allPlayers = Players:GetPlayers()
+    for _, player in ipairs(allPlayers) do
+        if player ~= LocalPlayer then
+            currentSelectedPlayer = player
+            updatePlayerInfo(player)
+            break
+        end
+    end
+    
+    if not currentSelectedPlayer then
+        warn("沒有其他玩家在遊戲中")
+    end
+end
+
+-- 初始顯示
+updateSpeedDisplay()
+updateDistanceDisplay()
+initializePlayerSelection()
+
+-- ==================== 提示信息 ====================
+print("距離維持系統已加載")
+print("速度控制功能已啟用")
+print("距離控制功能已啟用")
+print("高度鎖定功能已啟用")
+print("當前速度:", SpeedInputSystem.CurrentSpeed)
+print("維持距離:", DistanceMaintainSystem.TargetDistance)
+print("使用說明:")
+print("1. 點擊'玩家列表'選擇要維持距離的玩家")
+print("2. 點擊維持按鈕開始/停止維持距離")
+print("3. 在速度輸入框輸入數值並點擊設定按鈕 (1-500)")
+print("4. 在距離輸入框輸入數值並點擊設定按鈕 (1-3000)")
+print("5. 點擊'高度鎖定'按鈕啟用/關閉高度鎖定")
+print("6. 高度鎖定啟用後，角色不會上下浮動")
+
+-- ==================== 清理函數 ====================
+local function cleanup()
+    if distanceUpdateThread then
+        task.cancel(distanceUpdateThread)
+    end
+    DistanceMaintainSystem:StopMaintaining()
+    NoClipSystem:DisableNoClip()
+    if playerSelectionFrame then
+        playerSelectionFrame:Destroy()
+    end
+    if c00ltpgui then
+        c00ltpgui:Destroy()
+    end
+end
+
+-- 遊戲退出時清理
+LocalPlayer.CharacterRemoving:Connect(function()
+    cleanup()
+end)
+
+game:GetService("UserInputService").WindowFocused:Connect(function(focused)
+    if not focused then
+        DistanceMaintainSystem:StopMaintaining()
+    end
+end)
