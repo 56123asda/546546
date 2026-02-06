@@ -1,23 +1,57 @@
--- ==================== 改進的高速調節系統 ====================
-local SpeedSystem = {
+-- ==================== 輸入式速度調節系統 ====================
+local SpeedInputSystem = {
     CurrentSpeed = 8,
     MinSafeSpeed = 1,
     MaxSafeSpeed = 500,
     SpeedScale = 1.5,
     Acceleration = 0.5,
-    Deceleration = 0.8
+    Deceleration = 0.8,
+    InputEnabled = true
 }
 
-function SpeedSystem:GetAdjustedSpeed(baseSpeed)
+function SpeedInputSystem:GetAdjustedSpeed(baseSpeed)
     return baseSpeed * self.SpeedScale
 end
 
-function SpeedSystem:SmoothAccelerate(currentSpeed, targetSpeed)
+function SpeedInputSystem:SmoothAccelerate(currentSpeed, targetSpeed)
     if currentSpeed < targetSpeed then
         return currentSpeed + self.Acceleration * (targetSpeed - currentSpeed)
     else
         return currentSpeed - self.Deceleration * (currentSpeed - targetSpeed)
     end
+end
+
+function SpeedInputSystem:SetSpeedByInput(inputText)
+    if not self.InputEnabled then
+        return false, "速度輸入功能已禁用"
+    end
+    
+    -- 清理輸入
+    local cleanInput = string.gsub(inputText, "%s+", "")
+    
+    -- 檢查是否為數字
+    local speedNumber = tonumber(cleanInput)
+    if not speedNumber then
+        return false, "請輸入有效的數字"
+    end
+    
+    -- 檢查範圍
+    if speedNumber < self.MinSafeSpeed then
+        return false, string.format("速度不能低於 %d", self.MinSafeSpeed)
+    end
+    
+    if speedNumber > self.MaxSafeSpeed then
+        return false, string.format("速度不能高於 %d", self.MaxSafeSpeed)
+    end
+    
+    -- 設定速度
+    self.CurrentSpeed = speedNumber
+    return true, string.format("速度已設為: %d", speedNumber)
+end
+
+function SpeedInputSystem:ToggleInput(enabled)
+    self.InputEnabled = enabled
+    return enabled
 end
 
 -- ==================== 優化的穿牆系統 ====================
@@ -134,14 +168,15 @@ local FlyingTrackSystem = {
     BodyVelocity = nil,
     BodyGyro = nil,
     LastPosition = nil,
-    SpeedSystem = SpeedSystem,
+    SpeedSystem = SpeedInputSystem,
     NoClipSystem = NoClipSystem,
     MaxForceMultiplier = 3.0,
     UseDirectPath = true,
     AutoNoClipEnabled = true,
     _isInitialized = false,
     _smoothVelocity = Vector3.zero,
-    _targetVelocity = Vector3.zero
+    _targetVelocity = Vector3.zero,
+    _currentTarget = nil
 }
 
 function FlyingTrackSystem:_createBodyMover(className, name, parent)
@@ -220,6 +255,7 @@ end
 function FlyingTrackSystem:CleanupFlight()
     self._isInitialized = false
     self.IsTracking = false
+    self._currentTarget = nil
     
     local player = game:GetService("Players").LocalPlayer
     local character = player.Character
@@ -369,10 +405,11 @@ function FlyingTrackSystem:StartTracking(target, trackHeight)
     end
     
     self.IsTracking = true
+    self._currentTarget = target
     
     self.TrackThread = task.spawn(function()
         local protectedTrack = function()
-            self:TrackTargetDirect(target, trackHeight)
+            self:TrackTargetDirect(target, trackHeight or 5)
         end
         
         local trackSuccess, trackErr = pcall(protectedTrack)
@@ -414,6 +451,16 @@ function FlyingTrackSystem:AdjustSpeed(amount)
     return self.TrackSpeed
 end
 
+function FlyingTrackSystem:SetSpeedDirectly(speed)
+    if speed < SpeedInputSystem.MinSafeSpeed or speed > SpeedInputSystem.MaxSafeSpeed then
+        return false, "速度超出範圍"
+    end
+    
+    SpeedInputSystem.CurrentSpeed = speed
+    self.TrackSpeed = SpeedInputSystem:GetAdjustedSpeed(speed)
+    return true, string.format("速度已設為: %d", speed)
+end
+
 -- ==================== UI界面創建 ====================
 local c00ltpgui = Instance.new("ScreenGui")
 c00ltpgui.Name = "c00ltpgui"
@@ -429,7 +476,7 @@ c00ltpframe.BackgroundTransparency = 0.500
 c00ltpframe.BorderColor3 = Color3.fromRGB(255, 0, 4)
 c00ltpframe.BorderSizePixel = 6
 c00ltpframe.Position = UDim2.new(0.02, 0, 0.05, 0)
-c00ltpframe.Size = UDim2.new(0.25, 0, 0.28, 0)
+c00ltpframe.Size = UDim2.new(0.35, 0, 0.42, 0)
 c00ltpframe.Visible = true
 
 -- 玩家頭像
@@ -440,7 +487,7 @@ PlayerProfiles.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 PlayerProfiles.BorderColor3 = Color3.fromRGB(255, 0, 4)
 PlayerProfiles.BorderSizePixel = 2
 PlayerProfiles.Position = UDim2.new(0.03, 0, 0.08, 0)
-PlayerProfiles.Size = UDim2.new(0.25, 0, 0.80, 0)
+PlayerProfiles.Size = UDim2.new(0.25, 0, 0.65, 0)
 PlayerProfiles.Image = "rbxassetid://12222223187"
 
 -- 玩家名字
@@ -452,7 +499,7 @@ PlayerName.BackgroundTransparency = 0.500
 PlayerName.BorderColor3 = Color3.fromRGB(255, 0, 4)
 PlayerName.BorderSizePixel = 3
 PlayerName.Position = UDim2.new(0.30, 0, 0.08, 0)
-PlayerName.Size = UDim2.new(0.67, 0, 0.36, 0)
+PlayerName.Size = UDim2.new(0.67, 0, 0.28, 0)
 PlayerName.Font = Enum.Font.SourceSansBold
 PlayerName.Text = "請選擇玩家"
 PlayerName.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -472,8 +519,8 @@ PlayerIDs.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 PlayerIDs.BackgroundTransparency = 0.500
 PlayerIDs.BorderColor3 = Color3.fromRGB(255, 0, 4)
 PlayerIDs.BorderSizePixel = 3
-PlayerIDs.Position = UDim2.new(0.30, 0, 0.46, 0)
-PlayerIDs.Size = UDim2.new(0.38, 0, 0.21, 0)
+PlayerIDs.Position = UDim2.new(0.30, 0, 0.38, 0)
+PlayerIDs.Size = UDim2.new(0.38, 0, 0.16, 0)
 PlayerIDs.Font = Enum.Font.SourceSansBold
 PlayerIDs.Text = "ID: -"
 PlayerIDs.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -493,8 +540,8 @@ PlayerFar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 PlayerFar.BackgroundTransparency = 0.500
 PlayerFar.BorderColor3 = Color3.fromRGB(255, 0, 4)
 PlayerFar.BorderSizePixel = 3
-PlayerFar.Position = UDim2.new(0.70, 0, 0.46, 0)
-PlayerFar.Size = UDim2.new(0.27, 0, 0.21, 0)
+PlayerFar.Position = UDim2.new(0.70, 0, 0.38, 0)
+PlayerFar.Size = UDim2.new(0.27, 0, 0.16, 0)
 PlayerFar.Font = Enum.Font.SourceSansBold
 PlayerFar.Text = "距離: -"
 PlayerFar.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -514,8 +561,8 @@ SkipButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 SkipButton.BackgroundTransparency = 0.500
 SkipButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
 SkipButton.BorderSizePixel = 3
-SkipButton.Position = UDim2.new(1.02, 0, 0.69, 0)
-SkipButton.Size = UDim2.new(0.25, 0, 0.19, 0)
+SkipButton.Position = UDim2.new(1.02, 0, 0.76, 0)
+SkipButton.Size = UDim2.new(0.25, 0, 0.16, 0)
 SkipButton.Image = "rbxassetid://11283329347"
 
 -- 追蹤按鈕
@@ -527,7 +574,7 @@ TrackButton.BackgroundTransparency = 0.500
 TrackButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
 TrackButton.BorderSizePixel = 3
 TrackButton.Position = UDim2.new(1.02, 0, 0.08, 0)
-TrackButton.Size = UDim2.new(0.25, 0, 0.19, 0)
+TrackButton.Size = UDim2.new(0.25, 0, 0.16, 0)
 TrackButton.Image = "rbxassetid://7072725342"
 
 -- 自動穿牆按鈕
@@ -538,8 +585,8 @@ AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
 AutoNoClipButton.BackgroundTransparency = 0.500
 AutoNoClipButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
 AutoNoClipButton.BorderSizePixel = 3
-AutoNoClipButton.Position = UDim2.new(1.02, 0, 0.30, 0)
-AutoNoClipButton.Size = UDim2.new(0.25, 0, 0.19, 0)
+AutoNoClipButton.Position = UDim2.new(1.02, 0, 0.26, 0)
+AutoNoClipButton.Size = UDim2.new(0.25, 0, 0.16, 0)
 AutoNoClipButton.Font = Enum.Font.SourceSansBold
 AutoNoClipButton.Text = "追蹤穿牆: ✓"
 AutoNoClipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -555,27 +602,57 @@ DirectPathButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
 DirectPathButton.BackgroundTransparency = 0.500
 DirectPathButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
 DirectPathButton.BorderSizePixel = 3
-DirectPathButton.Position = UDim2.new(1.02, 0, 0.52, 0)
-DirectPathButton.Size = UDim2.new(0.25, 0, 0.19, 0)
+DirectPathButton.Position = UDim2.new(1.02, 0, 0.44, 0)
+DirectPathButton.Size = UDim2.new(0.25, 0, 0.16, 0)
 DirectPathButton.Font = Enum.Font.SourceSansBold
 DirectPathButton.Text = "直線追蹤: ✓"
 DirectPathButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 DirectPathButton.TextScaled = true
 
--- 設定按鈕
-local SettingsButton = Instance.new("TextButton")
-SettingsButton.Name = "SettingsButton"
-SettingsButton.Parent = c00ltpframe
-SettingsButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-SettingsButton.BackgroundTransparency = 0.500
-SettingsButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
-SettingsButton.BorderSizePixel = 3
-SettingsButton.Position = UDim2.new(1.28, 0, 0.08, 0)
-SettingsButton.Size = UDim2.new(0.25, 0, 0.19, 0)
-SettingsButton.Font = Enum.Font.SourceSansBold
-SettingsButton.Text = "設定"
-SettingsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-SettingsButton.TextScaled = true
+-- 玩家列表按鈕
+local PlayersListButton = Instance.new("TextButton")
+PlayersListButton.Name = "PlayersListButton"
+PlayersListButton.Parent = c00ltpframe
+PlayersListButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+PlayersListButton.BackgroundTransparency = 0.500
+PlayersListButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+PlayersListButton.BorderSizePixel = 3
+PlayersListButton.Position = UDim2.new(1.28, 0, 0.08, 0)
+PlayersListButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+PlayersListButton.Font = Enum.Font.SourceSansBold
+PlayersListButton.Text = "玩家列表"
+PlayersListButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayersListButton.TextScaled = true
+
+-- 停止追蹤按鈕
+local StopTrackButton = Instance.new("TextButton")
+StopTrackButton.Name = "StopTrackButton"
+StopTrackButton.Parent = c00ltpframe
+StopTrackButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+StopTrackButton.BackgroundTransparency = 0.500
+StopTrackButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+StopTrackButton.BorderSizePixel = 3
+StopTrackButton.Position = UDim2.new(1.28, 0, 0.26, 0)
+StopTrackButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+StopTrackButton.Font = Enum.Font.SourceSansBold
+StopTrackButton.Text = "停止追蹤"
+StopTrackButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+StopTrackButton.TextScaled = true
+
+-- 縮小按鈕
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Parent = c00ltpframe
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 200, 100)
+MinimizeButton.BackgroundTransparency = 0.500
+MinimizeButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+MinimizeButton.BorderSizePixel = 3
+MinimizeButton.Position = UDim2.new(1.28, 0, 0.44, 0)
+MinimizeButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+MinimizeButton.Font = Enum.Font.SourceSansBold
+MinimizeButton.Text = "縮小"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextScaled = true
 
 -- 關閉按鈕
 local CloseButton = Instance.new("TextButton")
@@ -585,8 +662,8 @@ CloseButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 CloseButton.BackgroundTransparency = 0.500
 CloseButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
 CloseButton.BorderSizePixel = 3
-CloseButton.Position = UDim2.new(0, 0, 1.1, 0)
-CloseButton.Size = UDim2.new(1, 0, 0.15, 0)
+CloseButton.Position = UDim2.new(0.70, 0, 0.94, 0)
+CloseButton.Size = UDim2.new(0.29, 0, 0.05, 0)
 CloseButton.Font = Enum.Font.SourceSansBold
 CloseButton.Text = "關閉視窗"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -606,8 +683,8 @@ Title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Title.BackgroundTransparency = 0.500
 Title.BorderColor3 = Color3.fromRGB(255, 0, 4)
 Title.BorderSizePixel = 3
-Title.Position = UDim2.new(0, 0, -0.18, 0)
-Title.Size = UDim2.new(0.68, 0, 0.15, 0)
+Title.Position = UDim2.new(0, 0, -0.15, 0)
+Title.Size = UDim2.new(0.68, 0, 0.12, 0)
 Title.Font = Enum.Font.SourceSansBold
 Title.Text = "飛行追蹤"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -620,899 +697,691 @@ Title.TextXAlignment = Enum.TextXAlignment.Center
 
 local UITextSizeConstraint_5 = Instance.new("UITextSizeConstraint")
 UITextSizeConstraint_5.Parent = Title
-UITextSizeConstraint_5.MaxTextSize = 30
+UITextSizeConstraint_5.MaxTextSize = 50
 
--- 縮小按鈕
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Name = "MinimizeButton"
-MinimizeButton.Parent = c00ltpframe
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MinimizeButton.BackgroundTransparency = 0.500
-MinimizeButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
-MinimizeButton.BorderSizePixel = 3
-MinimizeButton.Position = UDim2.new(0.7, 0, -0.18, 0)
-MinimizeButton.Size = UDim2.new(0.28, 0, 0.15, 0)
-MinimizeButton.Font = Enum.Font.SourceSansBold
-MinimizeButton.Text = "縮小"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeButton.TextScaled = true
-MinimizeButton.TextSize = 20.000
-MinimizeButton.TextWrapped = true
+-- ==================== 新增速度控制區 ====================
+local SpeedControlFrame = Instance.new("Frame")
+SpeedControlFrame.Name = "SpeedControlFrame"
+SpeedControlFrame.Parent = c00ltpframe
+SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SpeedControlFrame.BackgroundTransparency = 0.3
+SpeedControlFrame.BorderColor3 = Color3.fromRGB(255, 0, 4)
+SpeedControlFrame.BorderSizePixel = 2
+SpeedControlFrame.Position = UDim2.new(0, 0, 0.56, 0)
+SpeedControlFrame.Size = UDim2.new(1, 0, 0.36, 0)
+SpeedControlFrame.Visible = true
 
-local UITextSizeConstraint_13 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_13.Parent = MinimizeButton
-UITextSizeConstraint_13.MaxTextSize = 20
+-- 速度標籤
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Name = "SpeedLabel"
+SpeedLabel.Parent = SpeedControlFrame
+SpeedLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpeedLabel.BackgroundTransparency = 0.5
+SpeedLabel.BorderColor3 = Color3.fromRGB(255, 0, 4)
+SpeedLabel.BorderSizePixel = 2
+SpeedLabel.Position = UDim2.new(0.02, 0, 0.1, 0)
+SpeedLabel.Size = UDim2.new(0.3, 0, 0.3, 0)
+SpeedLabel.Font = Enum.Font.SourceSansBold
+SpeedLabel.Text = "當前速度: 8"
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.TextScaled = true
+SpeedLabel.TextWrapped = true
 
--- 最小化界面
-local MinimizedFrame = Instance.new("Frame")
-MinimizedFrame.Name = "MinimizedFrame"
-MinimizedFrame.Parent = c00ltpgui
-MinimizedFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MinimizedFrame.BackgroundTransparency = 0.500
-MinimizedFrame.BorderColor3 = Color3.fromRGB(255, 0, 4)
-MinimizedFrame.BorderSizePixel = 4
-MinimizedFrame.Position = UDim2.new(0.02, 0, 0.05, 0)
-MinimizedFrame.Size = UDim2.new(0.15, 0, 0.06, 0)
-MinimizedFrame.Visible = false
+-- 速度輸入框
+local SpeedInputBox = Instance.new("TextBox")
+SpeedInputBox.Name = "SpeedInputBox"
+SpeedInputBox.Parent = SpeedControlFrame
+SpeedInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpeedInputBox.BackgroundTransparency = 0.3
+SpeedInputBox.BorderColor3 = Color3.fromRGB(255, 0, 4)
+SpeedInputBox.BorderSizePixel = 2
+SpeedInputBox.Position = UDim2.new(0.34, 0, 0.1, 0)
+SpeedInputBox.Size = UDim2.new(0.3, 0, 0.3, 0)
+SpeedInputBox.Font = Enum.Font.SourceSans
+SpeedInputBox.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
+SpeedInputBox.PlaceholderText = "輸入速度 (1-500)"
+SpeedInputBox.Text = ""
+SpeedInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedInputBox.TextScaled = true
+SpeedInputBox.TextWrapped = true
+SpeedInputBox.ClearTextOnFocus = false
 
-local MinimizedTitle = Instance.new("TextLabel")
-MinimizedTitle.Name = "MinimizedTitle"
-MinimizedTitle.Parent = MinimizedFrame
-MinimizedTitle.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MinimizedTitle.BackgroundTransparency = 0.500
-MinimizedTitle.BorderColor3 = Color3.fromRGB(255, 0, 4)
-MinimizedTitle.BorderSizePixel = 2
-MinimizedTitle.Position = UDim2.new(0, 0, 0, 0)
-MinimizedTitle.Size = UDim2.new(0.7, 0, 1, 0)
-MinimizedTitle.Font = Enum.Font.SourceSansBold
-MinimizedTitle.Text = "飛行追蹤"
-MinimizedTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizedTitle.TextScaled = true
-MinimizedTitle.TextSize = 20.000
-MinimizedTitle.TextWrapped = true
-MinimizedTitle.TextXAlignment = Enum.TextXAlignment.Center
+-- 速度設定按鈕
+local SetSpeedButton = Instance.new("TextButton")
+SetSpeedButton.Name = "SetSpeedButton"
+SetSpeedButton.Parent = SpeedControlFrame
+SetSpeedButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+SetSpeedButton.BackgroundTransparency = 0.5
+SetSpeedButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+SetSpeedButton.BorderSizePixel = 2
+SetSpeedButton.Position = UDim2.new(0.66, 0, 0.1, 0)
+SetSpeedButton.Size = UDim2.new(0.3, 0, 0.3, 0)
+SetSpeedButton.Font = Enum.Font.SourceSansBold
+SetSpeedButton.Text = "設定速度"
+SetSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SetSpeedButton.TextScaled = true
+SetSpeedButton.TextWrapped = true
 
-local UITextSizeConstraint_15 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_15.Parent = MinimizedTitle
-UITextSizeConstraint_15.MaxTextSize = 20
+-- 速度微調按鈕框架
+local SpeedAdjustFrame = Instance.new("Frame")
+SpeedAdjustFrame.Name = "SpeedAdjustFrame"
+SpeedAdjustFrame.Parent = SpeedControlFrame
+SpeedAdjustFrame.BackgroundTransparency = 1
+SpeedAdjustFrame.Position = UDim2.new(0.02, 0, 0.5, 0)
+SpeedAdjustFrame.Size = UDim2.new(0.96, 0, 0.45, 0)
 
-local ExpandButton = Instance.new("TextButton")
-ExpandButton.Name = "ExpandButton"
-ExpandButton.Parent = MinimizedFrame
-ExpandButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ExpandButton.BackgroundTransparency = 0.500
-ExpandButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
-ExpandButton.BorderSizePixel = 2
-ExpandButton.Position = UDim2.new(0.7, 0, 0, 0)
-ExpandButton.Size = UDim2.new(0.3, 0, 1, 0)
-ExpandButton.Font = Enum.Font.SourceSansBold
-ExpandButton.Text = "展開"
-ExpandButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ExpandButton.TextScaled = true
-ExpandButton.TextSize = 20.000
-ExpandButton.TextWrapped = true
+-- 減少速度按鈕
+local DecreaseSpeedButton = Instance.new("TextButton")
+DecreaseSpeedButton.Name = "DecreaseSpeedButton"
+DecreaseSpeedButton.Parent = SpeedAdjustFrame
+DecreaseSpeedButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+DecreaseSpeedButton.BackgroundTransparency = 0.5
+DecreaseSpeedButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+DecreaseSpeedButton.BorderSizePixel = 2
+DecreaseSpeedButton.Position = UDim2.new(0, 0, 0, 0)
+DecreaseSpeedButton.Size = UDim2.new(0.2, 0, 1, 0)
+DecreaseSpeedButton.Font = Enum.Font.SourceSansBold
+DecreaseSpeedButton.Text = "-10"
+DecreaseSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DecreaseSpeedButton.TextScaled = true
 
-local UITextSizeConstraint_14 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_14.Parent = ExpandButton
-UITextSizeConstraint_14.MaxTextSize = 20
+-- 減速按鈕
+local DecreaseSmallButton = Instance.new("TextButton")
+DecreaseSmallButton.Name = "DecreaseSmallButton"
+DecreaseSmallButton.Parent = SpeedAdjustFrame
+DecreaseSmallButton.BackgroundColor3 = Color3.fromRGB(255, 150, 150)
+DecreaseSmallButton.BackgroundTransparency = 0.5
+DecreaseSmallButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+DecreaseSmallButton.BorderSizePixel = 2
+DecreaseSmallButton.Position = UDim2.new(0.22, 0, 0, 0)
+DecreaseSmallButton.Size = UDim2.new(0.2, 0, 1, 0)
+DecreaseSmallButton.Font = Enum.Font.SourceSansBold
+DecreaseSmallButton.Text = "-1"
+DecreaseSmallButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DecreaseSmallButton.TextScaled = true
 
--- 控制面板 (簡化版，移除追蹤距離設定)
-local ControlFrame = Instance.new("Frame")
-ControlFrame.Name = "ControlFrame"
-ControlFrame.Parent = c00ltpgui
-ControlFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ControlFrame.BackgroundTransparency = 0.500
-ControlFrame.BorderColor3 = Color3.fromRGB(255, 0, 4)
-ControlFrame.BorderSizePixel = 6
-ControlFrame.Position = UDim2.new(0.02, 0, 0.34, 0)
-ControlFrame.Size = UDim2.new(0.25, 0, 0.15, 0) -- 高度減少
-ControlFrame.Visible = false
+-- 重置按鈕
+local ResetSpeedButton = Instance.new("TextButton")
+ResetSpeedButton.Name = "ResetSpeedButton"
+ResetSpeedButton.Parent = SpeedAdjustFrame
+ResetSpeedButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+ResetSpeedButton.BackgroundTransparency = 0.5
+ResetSpeedButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+ResetSpeedButton.BorderSizePixel = 2
+ResetSpeedButton.Position = UDim2.new(0.44, 0, 0, 0)
+ResetSpeedButton.Size = UDim2.new(0.12, 0, 1, 0)
+ResetSpeedButton.Font = Enum.Font.SourceSansBold
+ResetSpeedButton.Text = "重置"
+ResetSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetSpeedButton.TextScaled = true
 
-local SettingsTitle = Instance.new("TextLabel")
-SettingsTitle.Name = "SettingsTitle"
-SettingsTitle.Parent = ControlFrame
-SettingsTitle.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-SettingsTitle.BackgroundTransparency = 0.500
-SettingsTitle.BorderColor3 = Color3.fromRGB(255, 0, 4)
-SettingsTitle.BorderSizePixel = 3
-SettingsTitle.Position = UDim2.new(0, 0, -0.25, 0)
-SettingsTitle.Size = UDim2.new(1, 0, 0.25, 0)
-SettingsTitle.Font = Enum.Font.SourceSansBold
-SettingsTitle.Text = "速度設定"
-SettingsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-SettingsTitle.TextScaled = true
-SettingsTitle.TextSize = 45.000
-SettingsTitle.TextWrapped = true
+-- 加速按鈕
+local IncreaseSmallButton = Instance.new("TextButton")
+IncreaseSmallButton.Name = "IncreaseSmallButton"
+IncreaseSmallButton.Parent = SpeedAdjustFrame
+IncreaseSmallButton.BackgroundColor3 = Color3.fromRGB(150, 255, 150)
+IncreaseSmallButton.BackgroundTransparency = 0.5
+IncreaseSmallButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+IncreaseSmallButton.BorderSizePixel = 2
+IncreaseSmallButton.Position = UDim2.new(0.58, 0, 0, 0)
+IncreaseSmallButton.Size = UDim2.new(0.2, 0, 1, 0)
+IncreaseSmallButton.Font = Enum.Font.SourceSansBold
+IncreaseSmallButton.Text = "+1"
+IncreaseSmallButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+IncreaseSmallButton.TextScaled = true
 
-local UITextSizeConstraint_6 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_6.Parent = SettingsTitle
-UITextSizeConstraint_6.MaxTextSize = 25
+-- 增加速度按鈕
+local IncreaseSpeedButton = Instance.new("TextButton")
+IncreaseSpeedButton.Name = "IncreaseSpeedButton"
+IncreaseSpeedButton.Parent = SpeedAdjustFrame
+IncreaseSpeedButton.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+IncreaseSpeedButton.BackgroundTransparency = 0.5
+IncreaseSpeedButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+IncreaseSpeedButton.BorderSizePixel = 2
+IncreaseSpeedButton.Position = UDim2.new(0.8, 0, 0, 0)
+IncreaseSpeedButton.Size = UDim2.new(0.2, 0, 1, 0)
+IncreaseSpeedButton.Font = Enum.Font.SourceSansBold
+IncreaseSpeedButton.Text = "+10"
+IncreaseSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+IncreaseSpeedButton.TextScaled = true
 
-local CloseSettingsButton = Instance.new("TextButton")
-CloseSettingsButton.Name = "CloseSettingsButton"
-CloseSettingsButton.Parent = ControlFrame
-CloseSettingsButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-CloseSettingsButton.BackgroundTransparency = 0.500
-CloseSettingsButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
-CloseSettingsButton.BorderSizePixel = 3
-CloseSettingsButton.Position = UDim2.new(0, 0, 1.8, 0)
-CloseSettingsButton.Size = UDim2.new(1, 0, 0.25, 0)
-CloseSettingsButton.Font = Enum.Font.SourceSansBold
-CloseSettingsButton.Text = "關閉設定"
-CloseSettingsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseSettingsButton.TextScaled = true
-CloseSettingsButton.TextSize = 20.000
-CloseSettingsButton.TextWrapped = true
+-- ==================== 玩家選擇系統 ====================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local currentSelectedPlayer = nil
+local playerSelectionFrame = nil
+local isMinimized = false
 
-local UITextSizeConstraint_10 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_10.Parent = CloseSettingsButton
-UITextSizeConstraint_10.MaxTextSize = 20
-
--- 追蹤速度設定 (保留)
-local TrackSpeedLabel = Instance.new("TextLabel")
-TrackSpeedLabel.Name = "TrackSpeedLabel"
-TrackSpeedLabel.Parent = ControlFrame
-TrackSpeedLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-TrackSpeedLabel.BackgroundTransparency = 0.500
-TrackSpeedLabel.BorderColor3 = Color3.fromRGB(255, 0, 4)
-TrackSpeedLabel.BorderSizePixel = 2
-TrackSpeedLabel.Position = UDim2.new(0.03, 0, 0.15, 0)
-TrackSpeedLabel.Size = UDim2.new(0.32, 0, 0.35, 0)
-TrackSpeedLabel.Font = Enum.Font.SourceSansBold
-TrackSpeedLabel.Text = "追蹤速度"
-TrackSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrackSpeedLabel.TextScaled = true
-TrackSpeedLabel.TextSize = 30.000
-TrackSpeedLabel.TextWrapped = true
-
-local TrackSpeedMinus = Instance.new("TextButton")
-TrackSpeedMinus.Name = "TrackSpeedMinus"
-TrackSpeedMinus.Parent = ControlFrame
-TrackSpeedMinus.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TrackSpeedMinus.BorderColor3 = Color3.fromRGB(255, 0, 4)
-TrackSpeedMinus.BorderSizePixel = 2
-TrackSpeedMinus.Position = UDim2.new(0.37, 0, 0.15, 0)
-TrackSpeedMinus.Size = UDim2.new(0.14, 0, 0.35, 0)
-TrackSpeedMinus.Font = Enum.Font.SourceSansBold
-TrackSpeedMinus.Text = "－"
-TrackSpeedMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrackSpeedMinus.TextScaled = true
-TrackSpeedMinus.TextSize = 25.000
-TrackSpeedMinus.TextWrapped = true
-
-local TrackSpeedSlider = Instance.new("TextButton")
-TrackSpeedSlider.Name = "TrackSpeedSlider"
-TrackSpeedSlider.Parent = ControlFrame
-TrackSpeedSlider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TrackSpeedSlider.BorderColor3 = Color3.fromRGB(255, 0, 4)
-TrackSpeedSlider.BorderSizePixel = 2
-TrackSpeedSlider.Position = UDim2.new(0.53, 0, 0.15, 0)
-TrackSpeedSlider.Size = UDim2.new(0.24, 0, 0.35, 0)
-TrackSpeedSlider.Font = Enum.Font.SourceSansBold
-TrackSpeedSlider.Text = "滑動調整"
-TrackSpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrackSpeedSlider.TextScaled = true
-TrackSpeedSlider.TextSize = 16.000
-TrackSpeedSlider.TextWrapped = true
-
-local TrackSpeedPlus = Instance.new("TextButton")
-TrackSpeedPlus.Name = "TrackSpeedPlus"
-TrackSpeedPlus.Parent = ControlFrame
-TrackSpeedPlus.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TrackSpeedPlus.BorderColor3 = Color3.fromRGB(255, 0, 4)
-TrackSpeedPlus.BorderSizePixel = 2
-TrackSpeedPlus.Position = UDim2.new(0.79, 0, 0.15, 0)
-TrackSpeedPlus.Size = UDim2.new(0.14, 0, 0.35, 0)
-TrackSpeedPlus.Font = Enum.Font.SourceSansBold
-TrackSpeedPlus.Text = "＋"
-TrackSpeedPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrackSpeedPlus.TextScaled = true
-TrackSpeedPlus.TextSize = 25.000
-TrackSpeedPlus.TextWrapped = true
-
-local TrackSpeedValue = Instance.new("TextLabel")
-TrackSpeedValue.Name = "TrackSpeedValue"
-TrackSpeedValue.Parent = ControlFrame
-TrackSpeedValue.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-TrackSpeedValue.BackgroundTransparency = 0.500
-TrackSpeedValue.BorderColor3 = Color3.fromRGB(255, 0, 4)
-TrackSpeedValue.BorderSizePixel = 2
-TrackSpeedValue.Position = UDim2.new(0.37, 0, 0.53, 0)
-TrackSpeedValue.Size = UDim2.new(0.56, 0, 0.30, 0)
-TrackSpeedValue.Font = Enum.Font.SourceSansBold
-TrackSpeedValue.Text = "12 速度"
-TrackSpeedValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-TrackSpeedValue.TextScaled = true
-TrackSpeedValue.TextSize = 25.000
-TrackSpeedValue.TextWrapped = true
-
--- ==================== 立即響應的主腳本邏輯 ====================
-local function createMainScript()
-    local Players = game:GetService("Players")
-    local UserInputService = game:GetService("UserInputService")
-    local TweenService = game:GetService("TweenService")
-    local StarterGui = game:GetService("StarterGui")
-    local RunService = game:GetService("RunService")
-    
-    local player = Players.LocalPlayer
-    
-    local frame = c00ltpframe
-    local skipButton = SkipButton
-    local closeButton = CloseButton
-    local trackButton = TrackButton
-    local settingsButton = SettingsButton
-    local autoNoClipButton = AutoNoClipButton
-    local directPathButton = DirectPathButton
-    local minimizeButton = MinimizeButton
-    
-    local playerName = PlayerName
-    local playerIDs = PlayerIDs
-    local playerFar = PlayerFar
-    local title = Title
-    local profileImage = PlayerProfiles
-    
-    local minimizedFrame = MinimizedFrame
-    local expandButton = ExpandButton
-    
-    local controlFrame = ControlFrame
-    local closeSettingsButton = CloseSettingsButton
-    
-    local trackSpeedLabel = TrackSpeedLabel
-    local trackSpeedSlider = TrackSpeedSlider
-    local trackSpeedValue = TrackSpeedValue
-    local trackSpeedMinus = TrackSpeedMinus
-    local trackSpeedPlus = TrackSpeedPlus
-    
-    local currentTarget = nil
-    local playerList = {}
-    local isTracking = false
-    local isMinimized = false
-    
-    local TRACK_HEIGHT = 2 -- 固定的追蹤高度
-    
-    local clickSound = Instance.new("Sound")
-    clickSound.SoundId = "rbxassetid://12221967"
-    clickSound.Volume = 1
-    clickSound.Parent = frame
-    
-    -- 即時更新變量
-    local lastDistanceUpdate = 0
-    local profileCache = {}
-    
-    -- 立即載入頭像（不延遲）
-    local function loadPlayerThumbnail(targetPlayer)
-        if not targetPlayer then
-            return "rbxassetid://12222223187"
-        end
+-- 更新玩家資訊顯示
+local function updatePlayerInfo(player)
+    if player then
+        PlayerName.Text = player.Name
+        PlayerIDs.Text = string.format("ID: %d", player.UserId)
         
-        local userId = targetPlayer.UserId
-        
-        if profileCache[userId] then
-            return profileCache[userId]
-        end
-        
-        -- 立即返回預設頭像
-        profileCache[userId] = "rbxassetid://12222223187"
-        
-        -- 後台異步載入真實頭像
-        task.spawn(function()
-            local success, result = pcall(function()
-                return Players:GetUserThumbnailAsync(
-                    userId,
-                    Enum.ThumbnailType.HeadShot,
-                    Enum.ThumbnailSize.Size420x420
-                )
-            end)
-            
-            if success and result and result ~= "" then
-                profileCache[userId] = result
-                
-                -- 如果當前玩家還是同一個，立即更新
-                if currentTarget and currentTarget.UserId == userId then
-                    pcall(function()
-                        profileImage.Image = result
-                    end)
-                end
-            end
+        -- 獲取玩家頭像
+        local success, result = pcall(function()
+            return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
         end)
         
-        return profileCache[userId]
-    end
-    
-    local function playClick()
-        if clickSound then
-            clickSound:Play()
-        end
-    end
-    
-    local function showFeedback(feedbackTitle, message, isError)
-        if not StarterGui then return end
-        
-        local icon = isError and "rbxassetid://6031094679" or "rbxassetid://6031094668"
-        
-        StarterGui:SetCore("SendNotification", {
-            Title = feedbackTitle,
-            Text = message,
-            Duration = isError and 3 or 2,
-            Icon = icon
-        })
-    end
-    
-    local function updateAutoNoClipButton()
-        if FlyingTrackSystem.AutoNoClipEnabled then
-            autoNoClipButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
-            autoNoClipButton.Text = "追蹤穿牆: ✓"
+        if success and result then
+            PlayerProfiles.Image = result
         else
-            autoNoClipButton.BackgroundColor3 = Color3.fromRGB(255, 120, 60)
-            autoNoClipButton.Text = "追蹤穿牆: ✗"
-        end
-    end
-    
-    local function updateTrackSpeedDisplay()
-        local currentSpeed = math.floor(FlyingTrackSystem.TrackSpeed)
-        trackSpeedValue.Text = string.format("%d 速度", currentSpeed)
-        
-        local minSpeed = FlyingTrackSystem.MinSpeed
-        local maxSpeed = FlyingTrackSystem.MaxSpeed
-        local fillPercent = (FlyingTrackSystem.TrackSpeed - minSpeed) / (maxSpeed - minSpeed)
-        local fillBars = math.floor(fillPercent * 10)
-        trackSpeedSlider.Text = string.rep("█", fillBars) .. string.rep("░", 10 - fillBars)
-    end
-    
-    local function adjustTrackSpeed(amount)
-        local oldSpeed = FlyingTrackSystem.TrackSpeed
-        local newSpeed = FlyingTrackSystem:AdjustSpeed(amount)
-        
-        updateTrackSpeedDisplay()
-        
-        playClick()
-        
-        local statusText = ""
-        if isTracking then
-            statusText = "\n正在追蹤中，速度已更新"
+            PlayerProfiles.Image = "rbxassetid://12222223187"
         end
         
-        showFeedback("速度已調整", 
-            string.format("速度: %d → %d%s", 
-                math.floor(oldSpeed), math.floor(newSpeed),
-                statusText))
-    end
-    
-    local function startFlyingTrack()
-        if game:GetService("NetworkClient") and not game:GetService("NetworkClient").ClientReplicator then
-            showFeedback("錯誤", "網絡連接不穩定", true)
-            return false
-        end
-        
-        if not currentTarget or not currentTarget.Character then
-            showFeedback("錯誤", "請先選擇一個玩家", true)
-            return false
-        end
-        
-        if not player.Character then
-            showFeedback("錯誤", "您的角色不存在", true)
-            return false
-        end
-        
-        local myRoot = player.Character:FindFirstChild("HumanoidRootPart")
-        local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
-        
-        if not myRoot or not targetRoot then
-            showFeedback("錯誤", "無法找到角色位置", true)
-            return false
-        end
-        
-        isTracking = true
-        trackButton.ImageTransparency = 0.3
-        
-        local modeText = FlyingTrackSystem.UseDirectPath and "直線追蹤" or "正常追蹤"
-        local currentSpeed = math.floor(FlyingTrackSystem.TrackSpeed)
-        local noClipText = FlyingTrackSystem.AutoNoClipEnabled and " (自動穿牆)" or ""
-        
-        showFeedback("開始高速追蹤！", 
-            "正在追蹤 " .. currentTarget.Name .. 
-            "\n速度：" .. currentSpeed .. 
-            "\n模式：" .. modeText .. noClipText)
-        
-        local success, message = FlyingTrackSystem:StartTracking(currentTarget, TRACK_HEIGHT)
-        
-        if not success then
-            isTracking = false
-            trackButton.ImageTransparency = 0
-            showFeedback("追蹤失敗", message, true)
-            return false
-        end
-        
-        playerFar.Text = "高速追蹤中..."
-        playerName.Text = "追蹤中: " .. currentTarget.Name
-        
-        if FlyingTrackSystem.AutoNoClipEnabled then
-            playerName.Text = playerName.Text .. " (穿牆中)"
-        end
-        
-        return true
-    end
-    
-    local function stopFlyingTrack()
-        isTracking = false
-        if trackButton then
-            trackButton.ImageTransparency = 0
-        end
-        
-        FlyingTrackSystem:StopTracking()
-        
-        if currentTarget then
-            local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            local targetRoot = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
-            
-            if myRoot and targetRoot then
-                local distance = (myRoot.Position - targetRoot.Position).Magnitude
-                playerFar.Text = "距離: " .. math.floor(distance) .. " 單位"
-            end
-        end
-        
-        if currentTarget then
-            playerName.Text = currentTarget.Name
-            playerIDs.Text = "ID: " .. tostring(currentTarget.UserId)
-        end
-        
-        showFeedback("停止追蹤", 
-            "已停止追蹤 " .. (currentTarget and currentTarget.Name or "目標") .. "\n穿牆模式已自動關閉")
-    end
-    
-    local function toggleMinimize()
-        playClick()
-        
-        if not isMinimized then
-            local framePos = frame.Position
-            
-            frame.Visible = false
-            controlFrame.Visible = false
-            minimizedFrame.Visible = true
-            minimizedFrame.Position = framePos
-            
-            isMinimized = true
-            minimizeButton.Text = "展開"
+        -- 更新追蹤按鈕狀態
+        if FlyingTrackSystem.IsTracking and FlyingTrackSystem._currentTarget == player then
+            TrackButton.Image = "rbxassetid://7072725343" -- 停止圖標
         else
-            local minimizedPos = minimizedFrame.Position
-            
-            minimizedFrame.Visible = false
-            frame.Visible = true
-            frame.Position = minimizedPos
-            
-            isMinimized = false
-            minimizeButton.Text = "縮小"
+            TrackButton.Image = "rbxassetid://7072725342" -- 追蹤圖標
         end
+    else
+        PlayerName.Text = "請選擇玩家"
+        PlayerIDs.Text = "ID: -"
+        PlayerFar.Text = "距離: -"
+        PlayerProfiles.Image = "rbxassetid://12222223187"
     end
-    
-    -- 立即更新玩家信息（不延遲）
-    local function updatePlayerInfoImmediately()
-        if not currentTarget then 
-            playerName.Text = "請選擇玩家"
-            playerIDs.Text = "ID: -"
-            playerFar.Text = "距離: -"
-            profileImage.Image = "rbxassetid://12222223187"
-            return 
-        end
-        
-        -- 立即更新名字和ID
-        playerName.Text = currentTarget.Name
-        playerIDs.Text = "ID: " .. tostring(currentTarget.UserId)
-        
-        -- 立即設置頭像（不等待）
-        local thumbnail = loadPlayerThumbnail(currentTarget)
-        pcall(function()
-            profileImage.Image = thumbnail
-        end)
-        
-        -- 計算距離
-        if player.Character and currentTarget.Character then
-            local myRoot = player.Character:FindFirstChild("HumanoidRootPart")
-            local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
-            
-            if myRoot and targetRoot then
-                local distance = (myRoot.Position - targetRoot.Position).Magnitude
-                
-                local statusText = ""
-                if isTracking then
-                    local currentSpeed = math.floor(FlyingTrackSystem.TrackSpeed)
-                    local modeText = FlyingTrackSystem.UseDirectPath and "直線" or "正常"
-                    local noClipText = FlyingTrackSystem.NoClipSystem.Enabled and "穿牆" or ""
-                    statusText = string.format(" (追蹤中 - 速度: %d [%s%s])", currentSpeed, modeText, 
-                        noClipText ~= "" and " " .. noClipText or "")
-                    
-                    playerName.Text = "追蹤中: " .. currentTarget.Name
-                    
-                    if noClipText ~= "" then
-                        playerName.Text = playerName.Text .. " (穿牆中)"
-                    end
-                end
-                
-                playerFar.Text = "距離: " .. math.floor(distance) .. " 單位" .. statusText
-            else
-                playerFar.Text = "距離: N/A"
-            end
-        else
-            playerFar.Text = "距離: N/A"
-        end
-    end
-    
-    -- 只更新距離（優化性能）
-    local function updateDistanceOnly()
-        if not currentTarget or not player.Character or not currentTarget.Character then
-            return
-        end
-        
-        local myRoot = player.Character:FindFirstChild("HumanoidRootPart")
-        local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
-        
-        if not myRoot or not targetRoot then
-            return
-        end
-        
-        local distance = (myRoot.Position - targetRoot.Position).Magnitude
-        local now = tick()
-        
-        -- 每0.3秒更新一次距離（避免過度計算）
-        if now - lastDistanceUpdate > 0.3 then
-            lastDistanceUpdate = now
-            
-            local statusText = ""
-            if isTracking then
-                local currentSpeed = math.floor(FlyingTrackSystem.TrackSpeed)
-                local modeText = FlyingTrackSystem.UseDirectPath and "直線" or "正常"
-                local noClipText = FlyingTrackSystem.NoClipSystem.Enabled and "穿牆" or ""
-                statusText = string.format(" (追蹤中 - 速度: %d [%s%s])", currentSpeed, modeText, 
-                    noClipText ~= "" and " " .. noClipText or "")
-            end
-            
-            playerFar.Text = "距離: " .. math.floor(distance) .. " 單位" .. statusText
-        end
-    end
-    
-    local function getNextTarget()
-        if currentTarget then
-            profileCache[currentTarget.UserId] = nil
-        end
-        
-        playerList = {}
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= player then
-                table.insert(playerList, plr)
-            end
-        end
-        
-        if #playerList == 0 then
-            currentTarget = nil
-            playerName.Text = "請選擇玩家"
-            playerIDs.Text = "ID: -"
-            playerFar.Text = "距離: -"
-            profileImage.Image = "rbxassetid://12222223187"
-            return
-        end
-        
-        if not currentTarget then
-            currentTarget = playerList[1]
-        else
-            local index = table.find(playerList, currentTarget) or 0
-            index = index + 1
-            if index > #playerList then index = 1 end
-            currentTarget = playerList[index]
-        end
-        
-        -- 立即更新UI，不等待
-        updatePlayerInfoImmediately()
-    end
-    
-    local function setupButtonHoverEffect(button)
-        local originalColor = button.BackgroundColor3
-        
-        button.MouseEnter:Connect(function()
-            button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        end)
-        
-        button.MouseLeave:Connect(function()
-            button.BackgroundColor3 = originalColor
-        end)
-    end
-    
-    local function cleanup()
-        if isTracking then
-            stopFlyingTrack()
-        end
-    end
-    
-    -- 初始化
-    showFeedback("飛行追蹤系統", "系統已啟動！\n追蹤時自動穿牆 ✓")
-    
-    -- 標題動畫
-    task.spawn(function()
-        while true do
-            if title and title.TextStrokeTransparency then
-                for i = 0.2, 0.6, 0.04 do
-                    if title and title.TextStrokeTransparency then
-                        title.TextStrokeTransparency = i
-                        task.wait(0.07)
-                    else
-                        break
-                    end
-                end
-                for i = 0.6, 0.2, -0.04 do
-                    if title and title.TextStrokeTransparency then
-                        title.TextStrokeTransparency = i
-                        task.wait(0.07)
-                    else
-                        break
-                    end
-                end
-            else
-                task.wait(0.5)
-            end
-        end
-    end)
-    
-    -- 設置按鈕懸停效果
-    RunService.RenderStepped:Wait()
-    setupButtonHoverEffect(trackButton)
-    setupButtonHoverEffect(skipButton)
-    setupButtonHoverEffect(settingsButton)
-    setupButtonHoverEffect(autoNoClipButton)
-    setupButtonHoverEffect(directPathButton)
-    setupButtonHoverEffect(minimizeButton)
-    setupButtonHoverEffect(expandButton)
-    setupButtonHoverEffect(trackSpeedMinus)
-    setupButtonHoverEffect(trackSpeedPlus)
-    
-    updateTrackSpeedDisplay()
-    updateAutoNoClipButton()
-    
-    -- 按鈕事件
-    minimizeButton.MouseButton1Click:Connect(toggleMinimize)
-    expandButton.MouseButton1Click:Connect(toggleMinimize)
-    
-    trackSpeedMinus.MouseButton1Click:Connect(function()
-        adjustTrackSpeed(-10)
-    end)
-    
-    trackSpeedPlus.MouseButton1Click:Connect(function()
-        adjustTrackSpeed(10)
-    end)
-    
-    autoNoClipButton.MouseButton1Click:Connect(function()
-        playClick()
-        
-        FlyingTrackSystem.AutoNoClipEnabled = not FlyingTrackSystem.AutoNoClipEnabled
-        
-        updateAutoNoClipButton()
-        
-        if FlyingTrackSystem.AutoNoClipEnabled then
-            showFeedback("追蹤穿牆", "已啟用追蹤時自動穿牆\n下次追蹤時生效")
-        else
-            showFeedback("追蹤穿牆", "已關閉追蹤時自動穿牆\n穿牆模式已關閉")
-            
-            if isTracking then
-                FlyingTrackSystem.NoClipSystem:DisableNoClip()
-            end
-        end
-    end)
-    
-    directPathButton.MouseButton1Click:Connect(function()
-        playClick()
-        
-        FlyingTrackSystem.UseDirectPath = not FlyingTrackSystem.UseDirectPath
-        
-        if FlyingTrackSystem.UseDirectPath then
-            directPathButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
-            directPathButton.Text = "直線追蹤: ✓"
-            showFeedback("追蹤模式", "已切換為直線追蹤模式")
-        else
-            directPathButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-            directPathButton.Text = "直線追蹤: ✗"
-            showFeedback("追蹤模式", "已切換為正常追蹤模式")
-        end
-    end)
-    
-    -- 速度滑動條控制
-    local isDraggingTrackSpeedSlider = false
-    local trackSpeedSliderStartX = 0
-    local trackSpeedSliderStartPercent = 0
-    
-    trackSpeedSlider.MouseButton1Down:Connect(function()
-        playClick()
-        isDraggingTrackSpeedSlider = true
-        trackSpeedSliderStartX = UserInputService:GetMouseLocation().X
-        trackSpeedSliderStartPercent = (FlyingTrackSystem.TrackSpeed - FlyingTrackSystem.MinSpeed) / 
-                                     (FlyingTrackSystem.MaxSpeed - FlyingTrackSystem.MinSpeed)
-        
-        trackSpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    end)
-    
-    RunService.RenderStepped:Connect(function()
-        if isDraggingTrackSpeedSlider then
-            local mouseX = UserInputService:GetMouseLocation().X
-            local deltaX = mouseX - trackSpeedSliderStartX
-            
-            local percentChange = deltaX / 200
-            local newPercent = math.clamp(trackSpeedSliderStartPercent + percentChange, 0, 1)
-            
-            local newSpeed = math.floor(
-                FlyingTrackSystem.MinSpeed + 
-                (newPercent * (FlyingTrackSystem.MaxSpeed - FlyingTrackSystem.MinSpeed)) + 0.5
-            )
-            
-            FlyingTrackSystem.TrackSpeed = newSpeed
-            local originalSpeed = newSpeed / FlyingTrackSystem.SpeedSystem.SpeedScale
-            FlyingTrackSystem.SpeedSystem.CurrentSpeed = math.max(1, math.floor(originalSpeed))
-            
-            updateTrackSpeedDisplay()
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if isDraggingTrackSpeedSlider then
-                isDraggingTrackSpeedSlider = false
-                trackSpeedSlider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            end
-        end
-    end)
-    
-    -- UI拖拽
-    local dragging = false
-    local dragStart, startPos
-    local dragTween
-    
-    local function updateDrag(input)
-        local delta = input.Position - dragStart
-        local newPos = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
-        if dragTween then dragTween:Cancel() end
-        dragTween = TweenService:Create(frame, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = newPos})
-        dragTween:Play()
-    end
-    
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            updateDrag(input)
-        end
-    end)
-    
-    -- 主要按鈕事件
-    skipButton.MouseButton1Click:Connect(function()
-        playClick()
-        
-        if isTracking then
-            stopFlyingTrack()
-        end
-        
-        getNextTarget()
-        
-        if isTracking and currentTarget then
-            task.wait(0.1)
-            startFlyingTrack()
-        end
-        
-        if currentTarget then
-            showFeedback("目標已切換", "當前目標: " .. currentTarget.Name)
-        end
-    end)
-    
-    settingsButton.MouseButton1Click:Connect(function()
-        if isMinimized then
-            toggleMinimize()
-            task.wait(0.1)
-        end
-        
-        playClick()
-        controlFrame.Visible = not controlFrame.Visible
-        
-        if controlFrame.Visible then
-            controlFrame.Position = UDim2.new(frame.Position.X.Scale, frame.Position.X.Offset, 
-                                            frame.Position.Y.Scale + frame.Size.Y.Scale + 0.02, 0)
-        end
-    end)
-    
-    closeSettingsButton.MouseButton1Click:Connect(function()
-        playClick()
-        controlFrame.Visible = false
-    end)
-    
-    closeButton.MouseButton1Click:Connect(function()
-        playClick()
-        frame.Visible = false
-        minimizedFrame.Visible = false
-        controlFrame.Visible = false
-        FlyingTrackSystem:StopTracking()
-    end)
-    
-    trackButton.MouseButton1Click:Connect(function()
-        playClick()
-        
-        if not currentTarget then
-            showFeedback("錯誤", "請先選擇一個玩家", true)
-            return
-        end
-        
-        if currentTarget == player then
-            showFeedback("錯誤", "無法追蹤自己", true)
-            return
-        end
-        
-        if not isTracking then
-            startFlyingTrack()
-        else
-            stopFlyingTrack()
-        end
-    end)
-    
-    -- 初始化玩家列表
-    getNextTarget()
-    
-    -- 角色事件處理
-    player.CharacterAdded:Connect(function(character)
-        task.wait(0.5)
-        
-        if isTracking then
-            stopFlyingTrack()
-            task.wait(1)
-            startFlyingTrack()
-        end
-    end)
-    
-    player.CharacterRemoving:Connect(cleanup)
-    
-    -- 玩家離開事件
-    Players.PlayerRemoving:Connect(function(leavingPlayer)
-        if leavingPlayer == player or leavingPlayer == currentTarget then
-            if isTracking then
-                stopFlyingTrack()
-            end
-            profileCache[leavingPlayer.UserId] = nil
-        end
-    end)
-    
-    -- 新玩家加入
-    Players.PlayerAdded:Connect(function(newPlayer)
-        task.wait(0.5)
-        if not currentTarget then
-            getNextTarget()
-        end
-    end)
-    
-    -- 即時距離更新循環
-    task.spawn(function()
-        while true do
-            if currentTarget then
-                updateDistanceOnly()
-            end
-            task.wait(0.1)
-        end
-    end)
 end
 
--- 啟動主腳本
-createMainScript()
+-- 更新距離顯示
+local function updateDistance()
+    if not currentSelectedPlayer then 
+        PlayerFar.Text = "距離: -"
+        return 
+    end
+    
+    local targetChar = currentSelectedPlayer.Character
+    local localChar = LocalPlayer.Character
+    
+    if targetChar and localChar then
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        local localRoot = localChar:FindFirstChild("HumanoidRootPart")
+        
+        if targetRoot and localRoot then
+            local distance = (targetRoot.Position - localRoot.Position).Magnitude
+            PlayerFar.Text = string.format("距離: %d", math.floor(distance + 0.5))
+        else
+            PlayerFar.Text = "距離: -"
+        end
+    else
+        PlayerFar.Text = "距離: -"
+    end
+end
 
--- 全局清理
-game:BindToClose(function()
-    if FlyingTrackSystem then
-        FlyingTrackSystem:StopTracking()
+-- 創建玩家選擇列表
+local function createPlayerSelection()
+    if playerSelectionFrame and playerSelectionFrame.Parent then
+        playerSelectionFrame:Destroy()
+        return
+    end
+    
+    playerSelectionFrame = Instance.new("Frame")
+    playerSelectionFrame.Name = "PlayerSelectionFrame"
+    playerSelectionFrame.Parent = c00ltpgui
+    playerSelectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    playerSelectionFrame.BackgroundTransparency = 0.2
+    playerSelectionFrame.BorderColor3 = Color3.fromRGB(255, 0, 4)
+    playerSelectionFrame.BorderSizePixel = 3
+    playerSelectionFrame.Position = UDim2.new(0.38, 0, 0.05, 0)
+    playerSelectionFrame.Size = UDim2.new(0.3, 0, 0.5, 0)
+    playerSelectionFrame.Visible = true
+    playerSelectionFrame.ZIndex = 10
+    
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Parent = playerSelectionFrame
+    title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    title.BackgroundTransparency = 0.5
+    title.BorderColor3 = Color3.fromRGB(255, 0, 4)
+    title.BorderSizePixel = 2
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.Size = UDim2.new(1, 0, 0.1, 0)
+    title.Font = Enum.Font.SourceSansBold
+    title.Text = "選擇玩家"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextScaled = true
+    
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Parent = playerSelectionFrame
+    closeButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+    closeButton.BackgroundTransparency = 0.5
+    closeButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+    closeButton.BorderSizePixel = 2
+    closeButton.Position = UDim2.new(0.9, 0, 0.02, 0)
+    closeButton.Size = UDim2.new(0.08, 0, 0.06, 0)
+    closeButton.Font = Enum.Font.SourceSansBold
+    closeButton.Text = "X"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextScaled = true
+    
+    closeButton.MouseButton1Click:Connect(function()
+        playerSelectionFrame:Destroy()
+        playerSelectionFrame = nil
+    end)
+    
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Name = "PlayerScrollFrame"
+    scrollFrame.Parent = playerSelectionFrame
+    scrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    scrollFrame.BackgroundTransparency = 0.3
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.Position = UDim2.new(0.02, 0, 0.12, 0)
+    scrollFrame.Size = UDim2.new(0.96, 0, 0.86, 0)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scrollFrame.ScrollBarThickness = 8
+    
+    local playerListLayout = Instance.new("UIListLayout")
+    playerListLayout.Parent = scrollFrame
+    playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    playerListLayout.Padding = UDim.new(0, 5)
+    
+    -- 獲取所有玩家
+    local allPlayers = Players:GetPlayers()
+    local playerCount = 0
+    
+    for _, player in ipairs(allPlayers) do
+        if player ~= LocalPlayer then
+            playerCount = playerCount + 1
+            
+            local playerButton = Instance.new("TextButton")
+            playerButton.Name = "PlayerButton_" .. player.Name
+            playerButton.Parent = scrollFrame
+            playerButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            playerButton.BackgroundTransparency = 0.5
+            playerButton.BorderColor3 = Color3.fromRGB(255, 0, 4)
+            playerButton.BorderSizePixel = 2
+            playerButton.Size = UDim2.new(0.96, 0, 0, 50)
+            playerButton.Font = Enum.Font.SourceSans
+            playerButton.Text = player.Name
+            playerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            playerButton.TextScaled = true
+            
+            playerButton.MouseButton1Click:Connect(function()
+                currentSelectedPlayer = player
+                updatePlayerInfo(player)
+                if playerSelectionFrame then
+                    playerSelectionFrame:Destroy()
+                    playerSelectionFrame = nil
+                end
+            end)
+        end
+    end
+    
+    -- 更新滾動區域大小
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, playerCount * 55)
+    
+    if playerCount == 0 then
+        local noPlayersLabel = Instance.new("TextLabel")
+        noPlayersLabel.Name = "NoPlayersLabel"
+        noPlayersLabel.Parent = scrollFrame
+        noPlayersLabel.BackgroundTransparency = 1
+        noPlayersLabel.Size = UDim2.new(1, 0, 0, 50)
+        noPlayersLabel.Font = Enum.Font.SourceSans
+        noPlayersLabel.Text = "沒有其他玩家"
+        noPlayersLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        noPlayersLabel.TextScaled = true
+    end
+end
+
+-- 切換縮小/展開狀態
+local function toggleMinimize()
+    isMinimized = not isMinimized
+    
+    if isMinimized then
+        -- 縮小狀態：非常小的界面
+        c00ltpframe.Size = UDim2.new(0.15, 0, 0.12, 0)
+        SpeedControlFrame.Visible = false
+        PlayerProfiles.Visible = false
+        PlayerName.Visible = false
+        PlayerIDs.Visible = false
+        PlayerFar.Visible = false
+        Title.Visible = false
+        
+        -- 重新定位和調整按鈕為更小的尺寸
+        TrackButton.Position = UDim2.new(0.02, 0, 0.15, 0)
+        TrackButton.Size = UDim2.new(0.46, 0, 0.35, 0)
+        
+        PlayersListButton.Position = UDim2.new(0.52, 0, 0.15, 0)
+        PlayersListButton.Size = UDim2.new(0.46, 0, 0.35, 0)
+        
+        MinimizeButton.Position = UDim2.new(0.02, 0, 0.55, 0)
+        MinimizeButton.Size = UDim2.new(0.96, 0, 0.35, 0)
+        MinimizeButton.Text = "展開"
+        
+        -- 隱藏其他按鈕
+        StopTrackButton.Visible = false
+        AutoNoClipButton.Visible = false
+        DirectPathButton.Visible = false
+        SkipButton.Visible = false
+        
+        CloseButton.Position = UDim2.new(0, 0, 0, 0)
+        CloseButton.Size = UDim2.new(0.15, 0, 0.15, 0)
+        CloseButton.Text = "X"
+    else
+        -- 展開狀態：顯示所有內容
+        c00ltpframe.Size = UDim2.new(0.35, 0, 0.42, 0)
+        SpeedControlFrame.Visible = true
+        PlayerProfiles.Visible = true
+        PlayerName.Visible = true
+        PlayerIDs.Visible = true
+        PlayerFar.Visible = true
+        Title.Visible = true
+        
+        -- 恢復按鈕位置
+        TrackButton.Position = UDim2.new(1.02, 0, 0.08, 0)
+        TrackButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        
+        PlayersListButton.Position = UDim2.new(1.28, 0, 0.08, 0)
+        PlayersListButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        
+        MinimizeButton.Text = "縮小"
+        MinimizeButton.Position = UDim2.new(1.28, 0, 0.44, 0)
+        MinimizeButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        
+        -- 顯示其他按鈕
+        StopTrackButton.Visible = true
+        AutoNoClipButton.Visible = true
+        DirectPathButton.Visible = true
+        SkipButton.Visible = true
+        
+        CloseButton.Position = UDim2.new(0.70, 0, 0.94, 0)
+        CloseButton.Size = UDim2.new(0.29, 0, 0.05, 0)
+        CloseButton.Text = "關閉視窗"
+    end
+end
+
+-- ==================== 速度控制功能實現 ====================
+local function updateSpeedDisplay()
+    SpeedLabel.Text = string.format("當前速度: %d", SpeedInputSystem.CurrentSpeed)
+    FlyingTrackSystem.TrackSpeed = SpeedInputSystem:GetAdjustedSpeed(SpeedInputSystem.CurrentSpeed)
+end
+
+-- 設定速度按鈕點擊事件
+SetSpeedButton.MouseButton1Click:Connect(function()
+    local inputText = SpeedInputBox.Text
+    local success, message = SpeedInputSystem:SetSpeedByInput(inputText)
+    
+    if success then
+        updateSpeedDisplay()
+        SpeedInputBox.Text = ""
+        SpeedInputBox.PlaceholderText = "速度已設定"
+        task.wait(1)
+        SpeedInputBox.PlaceholderText = "輸入速度 (1-500)"
+    else
+        local originalText = SpeedInputBox.Text
+        SpeedInputBox.Text = ""
+        SpeedInputBox.PlaceholderText = message
+        task.wait(2)
+        SpeedInputBox.Text = originalText
+        SpeedInputBox.PlaceholderText = "輸入速度 (1-500)"
     end
 end)
 
-return FlyingTrackSystem
+-- 速度微調按鈕事件
+DecreaseSpeedButton.MouseButton1Click:Connect(function()
+    SpeedInputSystem.CurrentSpeed = math.max(SpeedInputSystem.MinSafeSpeed, SpeedInputSystem.CurrentSpeed - 10)
+    updateSpeedDisplay()
+end)
+
+DecreaseSmallButton.MouseButton1Click:Connect(function()
+    SpeedInputSystem.CurrentSpeed = math.max(SpeedInputSystem.MinSafeSpeed, SpeedInputSystem.CurrentSpeed - 1)
+    updateSpeedDisplay()
+end)
+
+ResetSpeedButton.MouseButton1Click:Connect(function()
+    SpeedInputSystem.CurrentSpeed = 8
+    updateSpeedDisplay()
+end)
+
+IncreaseSmallButton.MouseButton1Click:Connect(function()
+    SpeedInputSystem.CurrentSpeed = math.min(SpeedInputSystem.MaxSafeSpeed, SpeedInputSystem.CurrentSpeed + 1)
+    updateSpeedDisplay()
+end)
+
+IncreaseSpeedButton.MouseButton1Click:Connect(function()
+    SpeedInputSystem.CurrentSpeed = math.min(SpeedInputSystem.MaxSafeSpeed, SpeedInputSystem.CurrentSpeed + 10)
+    updateSpeedDisplay()
+end)
+
+-- 輸入框焦點事件
+SpeedInputBox.Focused:Connect(function()
+    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+end)
+
+SpeedInputBox.FocusLost:Connect(function()
+    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    -- 輸入框失去焦點時也嘗試設定速度
+    local inputText = SpeedInputBox.Text
+    if inputText and inputText ~= "" then
+        local success, message = SpeedInputSystem:SetSpeedByInput(inputText)
+        if success then
+            updateSpeedDisplay()
+            SpeedInputBox.Text = ""
+            SpeedInputBox.PlaceholderText = "速度已設定"
+            task.wait(1)
+            SpeedInputBox.PlaceholderText = "輸入速度 (1-500)"
+        end
+    end
+end)
+
+-- ==================== 主控制功能 ====================
+-- 玩家列表按鈕
+PlayersListButton.MouseButton1Click:Connect(function()
+    createPlayerSelection()
+end)
+
+-- 追蹤按鈕事件
+TrackButton.MouseButton1Click:Connect(function()
+    if not currentSelectedPlayer then
+        createPlayerSelection()
+        return
+    end
+    
+    if FlyingTrackSystem.IsTracking and FlyingTrackSystem._currentTarget == currentSelectedPlayer then
+        -- 如果正在追蹤當前選擇的玩家，則停止追蹤
+        FlyingTrackSystem:StopTracking()
+        TrackButton.Image = "rbxassetid://7072725342" -- 切換回追蹤圖標
+    else
+        -- 開始追蹤新玩家
+        local success, message = FlyingTrackSystem:StartTracking(currentSelectedPlayer, 5)
+        if success then
+            TrackButton.Image = "rbxassetid://7072725343" -- 切換到停止圖標
+        else
+            warn(message)
+        end
+    end
+    
+    updatePlayerInfo(currentSelectedPlayer)
+end)
+
+-- 停止追蹤按鈕
+StopTrackButton.MouseButton1Click:Connect(function()
+    FlyingTrackSystem:StopTracking()
+    if currentSelectedPlayer then
+        updatePlayerInfo(currentSelectedPlayer)
+    end
+end)
+
+-- 縮小按鈕事件
+MinimizeButton.MouseButton1Click:Connect(function()
+    toggleMinimize()
+end)
+
+-- 關閉按鈕事件
+CloseButton.MouseButton1Click:Connect(function()
+    FlyingTrackSystem:StopTracking()
+    c00ltpframe.Visible = false
+end)
+
+-- 自動穿牆按鈕事件
+AutoNoClipButton.MouseButton1Click:Connect(function()
+    FlyingTrackSystem.AutoNoClipEnabled = not FlyingTrackSystem.AutoNoClipEnabled
+    if FlyingTrackSystem.AutoNoClipEnabled then
+        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
+        AutoNoClipButton.Text = "追蹤穿牆: ✓"
+    else
+        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+        AutoNoClipButton.Text = "追蹤穿牆: ✗"
+    end
+end)
+
+-- 直線追蹤按鈕事件
+DirectPathButton.MouseButton1Click:Connect(function()
+    FlyingTrackSystem.UseDirectPath = not FlyingTrackSystem.UseDirectPath
+    if FlyingTrackSystem.UseDirectPath then
+        DirectPathButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+        DirectPathButton.Text = "直線追蹤: ✓"
+    else
+        DirectPathButton.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
+        DirectPathButton.Text = "直線追蹤: ✗"
+    end
+end)
+
+-- 跳過按鈕事件
+SkipButton.MouseButton1Click:Connect(function()
+    if not currentSelectedPlayer then
+        createPlayerSelection()
+        return
+    end
+    
+    -- 跳過到下一玩家
+    local allPlayers = Players:GetPlayers()
+    local currentIndex = nil
+    
+    -- 找到當前選擇玩家的索引
+    for i, player in ipairs(allPlayers) do
+        if player == currentSelectedPlayer then
+            currentIndex = i
+            break
+        end
+    end
+    
+    if currentIndex then
+        -- 找下一個非自己的玩家
+        local nextPlayer = nil
+        for i = currentIndex + 1, #allPlayers do
+            if allPlayers[i] ~= LocalPlayer then
+                nextPlayer = allPlayers[i]
+                break
+            end
+        end
+        
+        -- 如果沒有找到，從頭開始找
+        if not nextPlayer then
+            for i, player in ipairs(allPlayers) do
+                if player ~= LocalPlayer and player ~= currentSelectedPlayer then
+                    nextPlayer = player
+                    break
+                end
+            end
+        end
+        
+        if nextPlayer then
+            currentSelectedPlayer = nextPlayer
+            updatePlayerInfo(nextPlayer)
+        else
+            warn("沒有其他玩家可以跳過")
+        end
+    end
+end)
+
+-- ==================== 自動更新距離 ====================
+local distanceUpdateThread = task.spawn(function()
+    while task.wait(0.5) do
+        if c00ltpframe.Visible and not isMinimized then
+            updateDistance()
+        end
+    end
+end)
+
+-- ==================== 玩家加入/離開處理 ====================
+Players.PlayerAdded:Connect(function(player)
+    if currentSelectedPlayer == nil then
+        -- 如果有新玩家加入且當前未選擇玩家，自動選擇第一個其他玩家
+        if player ~= LocalPlayer then
+            currentSelectedPlayer = player
+            updatePlayerInfo(player)
+        end
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if currentSelectedPlayer == player then
+        -- 如果當前選擇的玩家離開，選擇其他玩家
+        local allPlayers = Players:GetPlayers()
+        local newPlayer = nil
+        
+        for _, p in ipairs(allPlayers) do
+            if p ~= LocalPlayer and p ~= player then
+                newPlayer = p
+                break
+            end
+        end
+        
+        currentSelectedPlayer = newPlayer
+        updatePlayerInfo(newPlayer)
+        
+        -- 如果正在追蹤該玩家，停止追蹤
+        if FlyingTrackSystem.IsTracking and FlyingTrackSystem._currentTarget == player then
+            FlyingTrackSystem:StopTracking()
+        end
+    end
+end)
+
+-- 初始選擇一個玩家
+local function initializePlayerSelection()
+    local allPlayers = Players:GetPlayers()
+    for _, player in ipairs(allPlayers) do
+        if player ~= LocalPlayer then
+            currentSelectedPlayer = player
+            updatePlayerInfo(player)
+            break
+        end
+    end
+    
+    if not currentSelectedPlayer then
+        warn("沒有其他玩家在遊戲中")
+    end
+end
+
+-- 初始顯示
+updateSpeedDisplay()
+initializePlayerSelection()
+
+-- ==================== 提示信息 ====================
+print("飛行追蹤系統已加載")
+print("速度控制功能已啟用")
+print("當前速度:", SpeedInputSystem.CurrentSpeed)
+print("使用說明:")
+print("1. 點擊'玩家列表'選擇要追蹤的玩家")
+print("2. 點擊追蹤按鈕開始/停止追蹤")
+print("3. 點擊'縮小'按鈕切換到極簡模式")
+print("4. 使用速度控制功能調整飛行速度")
+print("5. 關閉按鈕位於右下角")
+
+-- ==================== 清理函數 ====================
+local function cleanup()
+    if distanceUpdateThread then
+        task.cancel(distanceUpdateThread)
+    end
+    FlyingTrackSystem:StopTracking()
+    NoClipSystem:DisableNoClip()
+    if playerSelectionFrame then
+        playerSelectionFrame:Destroy()
+    end
+    if c00ltpgui then
+        c00ltpgui:Destroy()
+    end
+end
+
+-- 遊戲退出時清理
+LocalPlayer.CharacterRemoving:Connect(function()
+    cleanup()
+end)
+
+game:GetService("UserInputService").WindowFocused:Connect(function(focused)
+    if not focused then
+        FlyingTrackSystem:StopTracking()
+    end
+end)
