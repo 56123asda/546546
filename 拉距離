@@ -178,6 +178,7 @@ local DistanceMaintainSystem = {
     _smoothVelocity = Vector3.zero,
     _targetVelocity = Vector3.zero,
     _currentTarget = nil,
+    _cleanupConnection = nil,
     
     -- 距離維持相關參數
     TargetDistance = 10,       -- 預設維持距離
@@ -187,8 +188,12 @@ local DistanceMaintainSystem = {
     HeightOffset = 5,          -- 高度偏移
     SmoothFactor = 0.3,        -- 平滑係數
     RotationSmoothness = 0.2,  -- 旋轉平滑度
+    
+    -- 鎖定功能
     LockHeight = false,        -- 鎖定高度功能
     LockedHeight = 0,          -- 鎖定的高度值
+    LockXAxis = false,         -- 鎖定X軸功能
+    LockedX = 0,               -- 鎖定的X座標
     StopVerticalDrift = true   -- 停止垂直浮動功能
 }
 
@@ -212,29 +217,54 @@ function DistanceMaintainSystem:InitializeFlight()
         return false, "角色無效" 
     end
     
+    self:CleanupFlight()
+    
     local hrp = character:WaitForChild("HumanoidRootPart", 2)
     if not hrp then 
         return false, "找不到角色根節點" 
     end
     
-    self:CleanupFlight()
-    
-    -- 創建BodyVelocity用於水平移動
+    -- 創建BodyVelocity用於移動
     self.BodyVelocity = self:_createBodyMover("BodyVelocity", "FlightVelocity", hrp)
     if not self.BodyVelocity then return false end
     
-    self.BodyVelocity.MaxForce = Vector3.new(10000, 0, 10000) * self.MaxForceMultiplier  -- Y軸設為0，禁止上下移動
+    -- 根據鎖定狀態設定最大力量
+    if self.LockXAxis and self.LockHeight then
+        -- X軸和高度都鎖定，只允許Z軸移動
+        self.BodyVelocity.MaxForce = Vector3.new(0, 0, 10000) * self.MaxForceMultiplier
+    elseif self.LockXAxis then
+        -- 只鎖定X軸，允許Y和Z軸移動
+        self.BodyVelocity.MaxForce = Vector3.new(0, 10000, 10000) * self.MaxForceMultiplier
+    elseif self.LockHeight then
+        -- 只鎖定高度，允許X和Z軸移動
+        self.BodyVelocity.MaxForce = Vector3.new(10000, 0, 10000) * self.MaxForceMultiplier
+    else
+        -- 都不鎖定，允許所有軸移動
+        self.BodyVelocity.MaxForce = Vector3.new(10000, 0, 10000) * self.MaxForceMultiplier
+    end
+    
     self.BodyVelocity.P = 1500
     self.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
     
-    -- 創建BodyPosition用於保持高度
+    -- 創建BodyPosition用於保持位置
     self.BodyPosition = self:_createBodyMover("BodyPosition", "FlightPosition", hrp)
     if not self.BodyPosition then return false end
     
-    self.BodyPosition.MaxForce = Vector3.new(0, 10000, 0) * self.MaxForceMultiplier  -- 只控制Y軸
-    self.BodyPosition.P = 2000
-    self.BodyPosition.Position = hrp.Position
-    self.BodyPosition.D = 500  -- 阻尼係數
+    -- 根據鎖定狀態設定BodyPosition的力量
+    local positionForce = Vector3.new(0, 0, 0)
+    if self.LockHeight then
+        positionForce = positionForce + Vector3.new(0, 10000, 0)
+    end
+    if self.LockXAxis then
+        positionForce = positionForce + Vector3.new(10000, 0, 0)
+    end
+    
+    if positionForce.Magnitude > 0 then
+        self.BodyPosition.MaxForce = positionForce * self.MaxForceMultiplier
+        self.BodyPosition.P = 2000
+        self.BodyPosition.Position = hrp.Position
+        self.BodyPosition.D = 500  -- 阻尼係數
+    end
     
     -- 創建BodyGyro用於控制旋轉
     self.BodyGyro = self:_createBodyMover("BodyGyro", "FlightGyro", hrp)
@@ -258,7 +288,9 @@ function DistanceMaintainSystem:InitializeFlight()
     end
     
     self.BodyVelocity.Parent = hrp
-    self.BodyPosition.Parent = hrp
+    if self.BodyPosition then
+        self.BodyPosition.Parent = hrp
+    end
     self.BodyGyro.Parent = hrp
     
     self.MoveSpeed = self.SpeedSystem:GetAdjustedSpeed(self.SpeedSystem.CurrentSpeed)
@@ -274,6 +306,13 @@ function DistanceMaintainSystem:InitializeFlight()
     self._smoothVelocity = Vector3.zero
     self._targetVelocity = Vector3.zero
     
+    -- 監聽角色重製事件
+    if not self._cleanupConnection then
+        self._cleanupConnection = player.CharacterRemoving:Connect(function()
+            self:CleanupFlight()
+        end)
+    end
+    
     return true
 end
 
@@ -282,6 +321,13 @@ function DistanceMaintainSystem:CleanupFlight()
     self.IsMaintaining = false
     self._currentTarget = nil
     self.LockHeight = false
+    self.LockXAxis = false
+    
+    -- 取消維持線程
+    if self.MaintainThread then
+        task.cancel(self.MaintainThread)
+        self.MaintainThread = nil
+    end
     
     local player = game:GetService("Players").LocalPlayer
     local character = player.Character
@@ -333,6 +379,21 @@ function DistanceMaintainSystem:CleanupFlight()
     self.LastPosition = nil
     
     self.NoClipSystem:DisableNoClip()
+    
+    -- 更新UI狀態
+    if MaintainButton then
+        MaintainButton.Image = "rbxassetid://7072725342"
+    end
+    
+    if HeightLockButton then
+        HeightLockButton.BackgroundColor3 = Color3.fromRGB(180, 120, 255)
+        HeightLockButton.Text = "高鎖"
+    end
+    
+    if XAxisLockButton then
+        XAxisLockButton.BackgroundColor3 = Color3.fromRGB(255, 120, 180)
+        XAxisLockButton.Text = "X鎖"
+    end
 end
 
 function DistanceMaintainSystem:CalculateMaintainPosition(targetPosition, currentPosition)
@@ -358,11 +419,15 @@ function DistanceMaintainSystem:CalculateMaintainPosition(targetPosition, curren
         targetMaintainPos = currentPosition
     end
     
-    -- 如果鎖定高度，則使用鎖定的高度值
+    -- 應用鎖定
+    if self.LockXAxis then
+        targetMaintainPos = Vector3.new(self.LockedX, targetMaintainPos.Y, targetMaintainPos.Z)
+    end
+    
     if self.LockHeight then
         targetMaintainPos = Vector3.new(targetMaintainPos.X, self.LockedHeight, targetMaintainPos.Z)
     else
-        -- 添加高度偏移
+        -- 添加高度偏移（如果高度沒鎖定）
         targetMaintainPos = targetMaintainPos + Vector3.new(0, self.HeightOffset, 0)
     end
     
@@ -377,7 +442,7 @@ function DistanceMaintainSystem:FlyToMaintainPosition(targetPosition)
         return false 
     end
     
-    if not self.BodyVelocity or not self.BodyGyro or not self.BodyPosition then 
+    if not self.BodyVelocity or not self.BodyGyro then 
         return false 
     end
     
@@ -387,49 +452,61 @@ function DistanceMaintainSystem:FlyToMaintainPosition(targetPosition)
     local currentPos = hrp.Position
     local maintainPos, currentDistance = self:CalculateMaintainPosition(targetPosition, currentPos)
     
-    -- 計算水平方向（忽略Y軸）
-    local horizontalDirection = (Vector3.new(maintainPos.X, 0, maintainPos.Z) - Vector3.new(currentPos.X, 0, currentPos.Z))
-    local horizontalDistance = horizontalDirection.Magnitude
+    -- 計算移動方向
+    local direction = (maintainPos - currentPos)
     
-    -- 根據水平移動距離調整速度
-    local targetSpeed
-    if horizontalDistance < 1 then
-        targetSpeed = Vector3.zero
-    elseif horizontalDistance < 5 then
-        local speedFactor = horizontalDistance / 5
-        local horizontalDir = horizontalDirection.Unit
-        targetSpeed = horizontalDir * self.MoveSpeed * speedFactor * 0.5
-    else
-        local horizontalDir = horizontalDirection.Unit
-        targetSpeed = horizontalDir * self.MoveSpeed
+    -- 根據鎖定狀態調整方向
+    if self.LockXAxis then
+        direction = Vector3.new(0, direction.Y, direction.Z)
     end
     
-    -- 平滑水平速度
+    if self.LockHeight then
+        direction = Vector3.new(direction.X, 0, direction.Z)
+    end
+    
+    local moveDistance = direction.Magnitude
+    
+    -- 根據移動距離調整速度
+    local targetSpeed
+    if moveDistance < 1 then
+        targetSpeed = Vector3.zero
+    elseif moveDistance < 5 then
+        local speedFactor = moveDistance / 5
+        local moveDir = direction.Unit
+        targetSpeed = moveDir * self.MoveSpeed * speedFactor * 0.5
+    else
+        local moveDir = direction.Unit
+        targetSpeed = moveDir * self.MoveSpeed
+    end
+    
+    -- 平滑速度
     self._smoothVelocity = self._smoothVelocity:Lerp(targetSpeed, self.SmoothFactor)
     
-    -- 設定水平速度（Y軸設為0）
+    -- 設定速度
     if self.BodyVelocity then
-        self.BodyVelocity.Velocity = Vector3.new(self._smoothVelocity.X, 0, self._smoothVelocity.Z)
+        self.BodyVelocity.Velocity = self._smoothVelocity
     end
     
-    -- 設定高度位置
-    if self.BodyPosition then
-        local targetHeight
-        if self.LockHeight then
-            targetHeight = self.LockedHeight
-        else
-            targetHeight = maintainPos.Y
+    -- 設定鎖定位置
+    if self.BodyPosition and (self.LockXAxis or self.LockHeight) then
+        local targetPosition = currentPos
+        
+        if self.LockXAxis then
+            targetPosition = Vector3.new(self.LockedX, targetPosition.Y, targetPosition.Z)
         end
         
-        -- 平滑高度變化
-        local currentHeight = hrp.Position.Y
-        local smoothHeight = currentHeight + (targetHeight - currentHeight) * 0.2
-        self.BodyPosition.Position = Vector3.new(currentPos.X, smoothHeight, currentPos.Z)
+        if self.LockHeight then
+            targetPosition = Vector3.new(targetPosition.X, self.LockedHeight, targetPosition.Z)
+        end
+        
+        -- 平滑位置變化
+        local smoothPosition = currentPos + (targetPosition - currentPos) * 0.2
+        self.BodyPosition.Position = smoothPosition
     end
     
-    -- 面向目標（水平方向）
-    if horizontalDistance > 0.1 and self.BodyGyro then
-        local lookDirection = (Vector3.new(targetPosition.X, 0, targetPosition.Z) - Vector3.new(currentPos.X, 0, currentPos.Z)).Unit
+    -- 面向目標
+    if moveDistance > 0.1 and self.BodyGyro then
+        local lookDirection = (targetPosition - currentPos).Unit
         if lookDirection.Magnitude > 0.1 then
             local currentCFrame = hrp.CFrame
             local targetCFrame = CFrame.new(currentPos, currentPos + lookDirection)
@@ -470,8 +547,15 @@ function DistanceMaintainSystem:MaintainDistanceDirect(target)
         if c00ltpframe and c00ltpframe.Visible then
             local PlayerFar = c00ltpframe:FindFirstChild("PlayerFar")
             if PlayerFar then
-                local lockText = self.LockHeight and " (高度鎖定)" or ""
-                PlayerFar.Text = string.format("距離: %d (維持: %.1f)%s", math.floor(currentDistance + 0.5), self.TargetDistance, lockText)
+                local lockText = ""
+                if self.LockHeight and self.LockXAxis then
+                    lockText = " (鎖)"
+                elseif self.LockHeight then
+                    lockText = " (高鎖)"
+                elseif self.LockXAxis then
+                    lockText = " (X鎖)"
+                end
+                PlayerFar.Text = string.format("距: %d (%.1f)%s", math.floor(currentDistance + 0.5), self.TargetDistance, lockText)
             end
         end
         
@@ -481,6 +565,7 @@ function DistanceMaintainSystem:MaintainDistanceDirect(target)
         end
     end
     
+    -- 自動清理
     self:CleanupFlight()
 end
 
@@ -503,13 +588,14 @@ function DistanceMaintainSystem:StartMaintaining(target)
         return false, err or "飛行系統初始化失敗"
     end
     
-    -- 記錄初始高度
+    -- 記錄初始位置
     local player = game:GetService("Players").LocalPlayer
     local character = player.Character
     if character and character:IsDescendantOf(game) then
         local hrp = character:FindFirstChild("HumanoidRootPart")
         if hrp then
             self.LockedHeight = hrp.Position.Y
+            self.LockedX = hrp.Position.X
         end
     end
     
@@ -528,7 +614,15 @@ function DistanceMaintainSystem:StartMaintaining(target)
         end
     end)
     
-    local lockText = self.LockHeight and " (高度鎖定)" or ""
+    local lockText = ""
+    if self.LockHeight and self.LockXAxis then
+        lockText = " (鎖)"
+    elseif self.LockHeight then
+        lockText = " (高鎖)"
+    elseif self.LockXAxis then
+        lockText = " (X鎖)"
+    end
+    
     return true, string.format("開始維持距離 (%.1f)%s", self.TargetDistance, lockText)
 end
 
@@ -561,6 +655,25 @@ function DistanceMaintainSystem:ToggleHeightLock()
         return true, "高度鎖定已啟用"
     else
         return true, "高度鎖定已關閉"
+    end
+end
+
+function DistanceMaintainSystem:ToggleXAxisLock()
+    self.LockXAxis = not self.LockXAxis
+    
+    if self.LockXAxis then
+        -- 記錄當前X座標
+        local player = game:GetService("Players").LocalPlayer
+        local character = player.Character
+        if character and character:IsDescendantOf(game) then
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                self.LockedX = hrp.Position.X
+            end
+        end
+        return true, "X軸鎖定已啟用"
+    else
+        return true, "X軸鎖定已關閉"
     end
 end
 
@@ -599,181 +712,114 @@ function DistanceMaintainSystem:SetDistanceDirectly(distance)
     return true, string.format("維持距離已設為: %.1f", distance)
 end
 
--- ==================== UI界面創建 ====================
+-- ==================== 緊湊UI界面創建 ====================
 local c00ltpgui = Instance.new("ScreenGui")
 c00ltpgui.Name = "c00ltpgui"
 c00ltpgui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 c00ltpgui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 c00ltpgui.ResetOnSpawn = false
 
+-- 主框架 - 尺寸大幅縮小
 local c00ltpframe = Instance.new("Frame")
 c00ltpframe.Name = "c00ltpframe"
 c00ltpframe.Parent = c00ltpgui
-c00ltpframe.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-c00ltpframe.BackgroundTransparency = 0.500
+c00ltpframe.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+c00ltpframe.BackgroundTransparency = 0.3
 c00ltpframe.BorderColor3 = Color3.fromRGB(0, 255, 0)
-c00ltpframe.BorderSizePixel = 6
-c00ltpframe.Position = UDim2.new(0.02, 0, 0.05, 0)
-c00ltpframe.Size = UDim2.new(0.35, 0, 0.55, 0) -- 增加高度
+c00ltpframe.BorderSizePixel = 3
+c00ltpframe.Position = UDim2.new(0.02, 0, 0.1, 0)
+c00ltpframe.Size = UDim2.new(0.22, 0, 0.28, 0) -- 大幅縮小
 c00ltpframe.Visible = true
+c00ltpframe.Active = true
+c00ltpframe.Selectable = true
 
--- 玩家頭像
+-- 玩家頭像 - 尺寸縮小
 local PlayerProfiles = Instance.new("ImageLabel")
 PlayerProfiles.Name = "PlayerProfiles"
 PlayerProfiles.Parent = c00ltpframe
-PlayerProfiles.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-PlayerProfiles.BorderColor3 = Color3.fromRGB(0, 255, 0)
-PlayerProfiles.BorderSizePixel = 2
-PlayerProfiles.Position = UDim2.new(0.03, 0, 0.08, 0)
-PlayerProfiles.Size = UDim2.new(0.25, 0, 0.45, 0)
+PlayerProfiles.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+PlayerProfiles.BorderColor3 = Color3.fromRGB(0, 200, 0)
+PlayerProfiles.BorderSizePixel = 1
+PlayerProfiles.Position = UDim2.new(0.03, 0, 0.05, 0)
+PlayerProfiles.Size = UDim2.new(0.28, 0, 0.3, 0)
 PlayerProfiles.Image = "rbxassetid://12222223187"
 
--- 玩家名字
+-- 玩家名字 - 尺寸縮小
 local PlayerName = Instance.new("TextLabel")
 PlayerName.Name = "PlayerName"
 PlayerName.Parent = c00ltpframe
-PlayerName.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-PlayerName.BackgroundTransparency = 0.500
-PlayerName.BorderColor3 = Color3.fromRGB(0, 255, 0)
-PlayerName.BorderSizePixel = 3
-PlayerName.Position = UDim2.new(0.30, 0, 0.08, 0)
-PlayerName.Size = UDim2.new(0.67, 0, 0.12, 0)
+PlayerName.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PlayerName.BackgroundTransparency = 0.5
+PlayerName.BorderColor3 = Color3.fromRGB(0, 200, 0)
+PlayerName.BorderSizePixel = 1
+PlayerName.Position = UDim2.new(0.33, 0, 0.05, 0)
+PlayerName.Size = UDim2.new(0.64, 0, 0.12, 0)
 PlayerName.Font = Enum.Font.SourceSansBold
-PlayerName.Text = "請選擇玩家"
+PlayerName.Text = "選擇玩家"
 PlayerName.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlayerName.TextScaled = true
-PlayerName.TextSize = 40.000
+PlayerName.TextSize = 20.000
 PlayerName.TextWrapped = true
 
-local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint.Parent = PlayerName
-UITextSizeConstraint.MaxTextSize = 40
-
--- 玩家ID
+-- 玩家ID - 尺寸縮小
 local PlayerIDs = Instance.new("TextLabel")
 PlayerIDs.Name = "PlayerIDs"
 PlayerIDs.Parent = c00ltpframe
-PlayerIDs.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-PlayerIDs.BackgroundTransparency = 0.500
-PlayerIDs.BorderColor3 = Color3.fromRGB(0, 255, 0)
-PlayerIDs.BorderSizePixel = 3
-PlayerIDs.Position = UDim2.new(0.30, 0, 0.22, 0)
-PlayerIDs.Size = UDim2.new(0.38, 0, 0.08, 0)
-PlayerIDs.Font = Enum.Font.SourceSansBold
+PlayerIDs.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PlayerIDs.BackgroundTransparency = 0.5
+PlayerIDs.BorderColor3 = Color3.fromRGB(0, 200, 0)
+PlayerIDs.BorderSizePixel = 1
+PlayerIDs.Position = UDim2.new(0.33, 0, 0.19, 0)
+PlayerIDs.Size = UDim2.new(0.32, 0, 0.08, 0)
+PlayerIDs.Font = Enum.Font.SourceSans
 PlayerIDs.Text = "ID: -"
-PlayerIDs.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerIDs.TextColor3 = Color3.fromRGB(220, 220, 220)
 PlayerIDs.TextScaled = true
-PlayerIDs.TextSize = 30.000
+PlayerIDs.TextSize = 16.000
 PlayerIDs.TextWrapped = true
 
-local UITextSizeConstraint_2 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_2.Parent = PlayerIDs
-UITextSizeConstraint_2.MaxTextSize = 30
-
--- 距離顯示
+-- 距離顯示 - 尺寸縮小
 local PlayerFar = Instance.new("TextLabel")
 PlayerFar.Name = "PlayerFar"
 PlayerFar.Parent = c00ltpframe
-PlayerFar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-PlayerFar.BackgroundTransparency = 0.500
-PlayerFar.BorderColor3 = Color3.fromRGB(0, 255, 0)
-PlayerFar.BorderSizePixel = 3
-PlayerFar.Position = UDim2.new(0.70, 0, 0.22, 0)
-PlayerFar.Size = UDim2.new(0.27, 0, 0.08, 0)
-PlayerFar.Font = Enum.Font.SourceSansBold
-PlayerFar.Text = "距離: -"
-PlayerFar.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlayerFar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PlayerFar.BackgroundTransparency = 0.5
+PlayerFar.BorderColor3 = Color3.fromRGB(0, 200, 0)
+PlayerFar.BorderSizePixel = 1
+PlayerFar.Position = UDim2.new(0.67, 0, 0.19, 0)
+PlayerFar.Size = UDim2.new(0.30, 0, 0.08, 0)
+PlayerFar.Font = Enum.Font.SourceSans
+PlayerFar.Text = "距: -"
+PlayerFar.TextColor3 = Color3.fromRGB(220, 220, 220)
 PlayerFar.TextScaled = true
-PlayerFar.TextSize = 30.000
+PlayerFar.TextSize = 16.000
 PlayerFar.TextWrapped = true
 
-local UITextSizeConstraint_3 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_3.Parent = PlayerFar
-UITextSizeConstraint_3.MaxTextSize = 30
-
+-- ==================== 第一行按鈕 ====================
 -- 維持距離按鈕
 local MaintainButton = Instance.new("ImageButton")
 MaintainButton.Name = "MaintainButton"
 MaintainButton.Parent = c00ltpframe
-MaintainButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MaintainButton.BackgroundTransparency = 0.500
-MaintainButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-MaintainButton.BorderSizePixel = 3
-MaintainButton.Position = UDim2.new(1.02, 0, 0.08, 0)
-MaintainButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+MaintainButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MaintainButton.BackgroundTransparency = 0.5
+MaintainButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+MaintainButton.BorderSizePixel = 1
+MaintainButton.Position = UDim2.new(0.03, 0, 0.37, 0)
+MaintainButton.Size = UDim2.new(0.22, 0, 0.12, 0)
 MaintainButton.Image = "rbxassetid://7072725342"
-
--- 跳過按鈕
-local SkipButton = Instance.new("ImageButton")
-SkipButton.Name = "SkipButton"
-SkipButton.Parent = c00ltpframe
-SkipButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-SkipButton.BackgroundTransparency = 0.500
-SkipButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-SkipButton.BorderSizePixel = 3
-SkipButton.Position = UDim2.new(1.02, 0, 0.26, 0)
-SkipButton.Size = UDim2.new(0.25, 0, 0.16, 0)
-SkipButton.Image = "rbxassetid://11283329347"
-
--- 自動穿牆按鈕
-local AutoNoClipButton = Instance.new("TextButton")
-AutoNoClipButton.Name = "AutoNoClipButton"
-AutoNoClipButton.Parent = c00ltpframe
-AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
-AutoNoClipButton.BackgroundTransparency = 0.500
-AutoNoClipButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-AutoNoClipButton.BorderSizePixel = 3
-AutoNoClipButton.Position = UDim2.new(1.02, 0, 0.44, 0)
-AutoNoClipButton.Size = UDim2.new(0.25, 0, 0.16, 0)
-AutoNoClipButton.Font = Enum.Font.SourceSansBold
-AutoNoClipButton.Text = "飛行穿牆: ✓"
-AutoNoClipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoNoClipButton.TextScaled = true
-AutoNoClipButton.TextSize = 25.000
-AutoNoClipButton.TextWrapped = true
-
--- 直線飛行按鈕
-local DirectPathButton = Instance.new("TextButton")
-DirectPathButton.Name = "DirectPathButton"
-DirectPathButton.Parent = c00ltpframe
-DirectPathButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-DirectPathButton.BackgroundTransparency = 0.500
-DirectPathButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-DirectPathButton.BorderSizePixel = 3
-DirectPathButton.Position = UDim2.new(1.02, 0, 0.62, 0)
-DirectPathButton.Size = UDim2.new(0.25, 0, 0.16, 0)
-DirectPathButton.Font = Enum.Font.SourceSansBold
-DirectPathButton.Text = "直線飛行: ✓"
-DirectPathButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-DirectPathButton.TextScaled = true
-
--- 高度鎖定按鈕 (新增)
-local HeightLockButton = Instance.new("TextButton")
-HeightLockButton.Name = "HeightLockButton"
-HeightLockButton.Parent = c00ltpframe
-HeightLockButton.BackgroundColor3 = Color3.fromRGB(180, 120, 255)
-HeightLockButton.BackgroundTransparency = 0.500
-HeightLockButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-HeightLockButton.BorderSizePixel = 3
-HeightLockButton.Position = UDim2.new(1.02, 0, 0.80, 0)
-HeightLockButton.Size = UDim2.new(0.25, 0, 0.16, 0)
-HeightLockButton.Font = Enum.Font.SourceSansBold
-HeightLockButton.Text = "高度鎖定: ✗"
-HeightLockButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-HeightLockButton.TextScaled = true
 
 -- 玩家列表按鈕
 local PlayersListButton = Instance.new("TextButton")
 PlayersListButton.Name = "PlayersListButton"
 PlayersListButton.Parent = c00ltpframe
-PlayersListButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-PlayersListButton.BackgroundTransparency = 0.500
-PlayersListButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-PlayersListButton.BorderSizePixel = 3
-PlayersListButton.Position = UDim2.new(1.28, 0, 0.08, 0)
-PlayersListButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+PlayersListButton.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
+PlayersListButton.BackgroundTransparency = 0.5
+PlayersListButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+PlayersListButton.BorderSizePixel = 1
+PlayersListButton.Position = UDim2.new(0.27, 0, 0.37, 0)
+PlayersListButton.Size = UDim2.new(0.22, 0, 0.12, 0)
 PlayersListButton.Font = Enum.Font.SourceSansBold
-PlayersListButton.Text = "玩家列表"
+PlayersListButton.Text = "列表"
 PlayersListButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlayersListButton.TextScaled = true
 
@@ -781,117 +827,129 @@ PlayersListButton.TextScaled = true
 local StopMaintainButton = Instance.new("TextButton")
 StopMaintainButton.Name = "StopMaintainButton"
 StopMaintainButton.Parent = c00ltpframe
-StopMaintainButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-StopMaintainButton.BackgroundTransparency = 0.500
-StopMaintainButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-StopMaintainButton.BorderSizePixel = 3
-StopMaintainButton.Position = UDim2.new(1.28, 0, 0.26, 0)
-StopMaintainButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+StopMaintainButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+StopMaintainButton.BackgroundTransparency = 0.5
+StopMaintainButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+StopMaintainButton.BorderSizePixel = 1
+StopMaintainButton.Position = UDim2.new(0.51, 0, 0.37, 0)
+StopMaintainButton.Size = UDim2.new(0.22, 0, 0.12, 0)
 StopMaintainButton.Font = Enum.Font.SourceSansBold
-StopMaintainButton.Text = "停止維持"
+StopMaintainButton.Text = "停止"
 StopMaintainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 StopMaintainButton.TextScaled = true
 
--- 縮小按鈕
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Name = "MinimizeButton"
-MinimizeButton.Parent = c00ltpframe
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 200, 100)
-MinimizeButton.BackgroundTransparency = 0.500
-MinimizeButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-MinimizeButton.BorderSizePixel = 3
-MinimizeButton.Position = UDim2.new(1.28, 0, 0.44, 0)
-MinimizeButton.Size = UDim2.new(0.25, 0, 0.16, 0)
-MinimizeButton.Font = Enum.Font.SourceSansBold
-MinimizeButton.Text = "縮小"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeButton.TextScaled = true
+-- 跳過按鈕
+local SkipButton = Instance.new("ImageButton")
+SkipButton.Name = "SkipButton"
+SkipButton.Parent = c00ltpframe
+SkipButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+SkipButton.BackgroundTransparency = 0.5
+SkipButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+SkipButton.BorderSizePixel = 1
+SkipButton.Position = UDim2.new(0.75, 0, 0.37, 0)
+SkipButton.Size = UDim2.new(0.22, 0, 0.12, 0)
+SkipButton.Image = "rbxassetid://11283329347"
 
--- 關閉按鈕
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Parent = c00ltpframe
-CloseButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-CloseButton.BackgroundTransparency = 0.500
-CloseButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-CloseButton.BorderSizePixel = 3
-CloseButton.Position = UDim2.new(0.70, 0, 0.94, 0)
-CloseButton.Size = UDim2.new(0.29, 0, 0.05, 0)
-CloseButton.Font = Enum.Font.SourceSansBold
-CloseButton.Text = "關閉視窗"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextScaled = true
-CloseButton.TextSize = 20.000
-CloseButton.TextWrapped = true
+-- ==================== 第二行按鈕 ====================
+-- 自動穿牆按鈕
+local AutoNoClipButton = Instance.new("TextButton")
+AutoNoClipButton.Name = "AutoNoClipButton"
+AutoNoClipButton.Parent = c00ltpframe
+AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+AutoNoClipButton.BackgroundTransparency = 0.5
+AutoNoClipButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+AutoNoClipButton.BorderSizePixel = 1
+AutoNoClipButton.Position = UDim2.new(0.03, 0, 0.51, 0)
+AutoNoClipButton.Size = UDim2.new(0.22, 0, 0.12, 0)
+AutoNoClipButton.Font = Enum.Font.SourceSansBold
+AutoNoClipButton.Text = "穿牆✓"
+AutoNoClipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoNoClipButton.TextScaled = true
 
-local UITextSizeConstraint_4 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_4.Parent = CloseButton
-UITextSizeConstraint_4.MaxTextSize = 20
+-- 直線飛行按鈕
+local DirectPathButton = Instance.new("TextButton")
+DirectPathButton.Name = "DirectPathButton"
+DirectPathButton.Parent = c00ltpframe
+DirectPathButton.BackgroundColor3 = Color3.fromRGB(40, 140, 220)
+DirectPathButton.BackgroundTransparency = 0.5
+DirectPathButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+DirectPathButton.BorderSizePixel = 1
+DirectPathButton.Position = UDim2.new(0.27, 0, 0.51, 0)
+DirectPathButton.Size = UDim2.new(0.22, 0, 0.12, 0)
+DirectPathButton.Font = Enum.Font.SourceSansBold
+DirectPathButton.Text = "直線✓"
+DirectPathButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DirectPathButton.TextScaled = true
 
--- 標題
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Parent = c00ltpframe
-Title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Title.BackgroundTransparency = 0.500
-Title.BorderColor3 = Color3.fromRGB(0, 255, 0)
-Title.BorderSizePixel = 3
-Title.Position = UDim2.new(0, 0, -0.10, 0)
-Title.Size = UDim2.new(0.68, 0, 0.09, 0)
-Title.Font = Enum.Font.SourceSansBold
-Title.Text = "距離維持系統"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextScaled = true
-Title.TextSize = 50.000
-Title.TextWrapped = true
-Title.TextStrokeColor3 = Color3.fromRGB(0, 255, 0)
-Title.TextStrokeTransparency = 0.2
-Title.TextXAlignment = Enum.TextXAlignment.Center
+-- 高度鎖定按鈕
+local HeightLockButton = Instance.new("TextButton")
+HeightLockButton.Name = "HeightLockButton"
+HeightLockButton.Parent = c00ltpframe
+HeightLockButton.BackgroundColor3 = Color3.fromRGB(140, 80, 220)
+HeightLockButton.BackgroundTransparency = 0.5
+HeightLockButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+HeightLockButton.BorderSizePixel = 1
+HeightLockButton.Position = UDim2.new(0.51, 0, 0.51, 0)
+HeightLockButton.Size = UDim2.new(0.22, 0, 0.12, 0)
+HeightLockButton.Font = Enum.Font.SourceSansBold
+HeightLockButton.Text = "高鎖"
+HeightLockButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HeightLockButton.TextScaled = true
 
-local UITextSizeConstraint_5 = Instance.new("UITextSizeConstraint")
-UITextSizeConstraint_5.Parent = Title
-UITextSizeConstraint_5.MaxTextSize = 50
+-- X軸鎖定按鈕
+local XAxisLockButton = Instance.new("TextButton")
+XAxisLockButton.Name = "XAxisLockButton"
+XAxisLockButton.Parent = c00ltpframe
+XAxisLockButton.BackgroundColor3 = Color3.fromRGB(220, 80, 140)
+XAxisLockButton.BackgroundTransparency = 0.5
+XAxisLockButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+XAxisLockButton.BorderSizePixel = 1
+XAxisLockButton.Position = UDim2.new(0.75, 0, 0.51, 0)
+XAxisLockButton.Size = UDim2.new(0.22, 0, 0.12, 0)
+XAxisLockButton.Font = Enum.Font.SourceSansBold
+XAxisLockButton.Text = "X鎖"
+XAxisLockButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+XAxisLockButton.TextScaled = true
 
--- ==================== 速度控制區 ====================
-local SpeedControlFrame = Instance.new("Frame")
-SpeedControlFrame.Name = "SpeedControlFrame"
-SpeedControlFrame.Parent = c00ltpframe
-SpeedControlFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-SpeedControlFrame.BackgroundTransparency = 0.3
-SpeedControlFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
-SpeedControlFrame.BorderSizePixel = 2
-SpeedControlFrame.Position = UDim2.new(0.30, 0, 0.32, 0)
-SpeedControlFrame.Size = UDim2.new(0.67, 0, 0.18, 0)
-SpeedControlFrame.Visible = true
+-- ==================== 控制區 ====================
+local ControlFrame = Instance.new("Frame")
+ControlFrame.Name = "ControlFrame"
+ControlFrame.Parent = c00ltpframe
+ControlFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+ControlFrame.BackgroundTransparency = 0.3
+ControlFrame.BorderColor3 = Color3.fromRGB(0, 200, 0)
+ControlFrame.BorderSizePixel = 1
+ControlFrame.Position = UDim2.new(0.03, 0, 0.65, 0)
+ControlFrame.Size = UDim2.new(0.94, 0, 0.32, 0)
+ControlFrame.Visible = true
 
--- 速度標籤
+-- 速度控制
 local SpeedLabel = Instance.new("TextLabel")
 SpeedLabel.Name = "SpeedLabel"
-SpeedLabel.Parent = SpeedControlFrame
-SpeedLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpeedLabel.Parent = ControlFrame
+SpeedLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 SpeedLabel.BackgroundTransparency = 0.5
-SpeedLabel.BorderColor3 = Color3.fromRGB(0, 255, 0)
-SpeedLabel.BorderSizePixel = 2
-SpeedLabel.Position = UDim2.new(0.02, 0, 0.1, 0)
-SpeedLabel.Size = UDim2.new(0.25, 0, 0.8, 0)
+SpeedLabel.BorderColor3 = Color3.fromRGB(0, 200, 0)
+SpeedLabel.BorderSizePixel = 1
+SpeedLabel.Position = UDim2.new(0.02, 0, 0.05, 0)
+SpeedLabel.Size = UDim2.new(0.25, 0, 0.25, 0)
 SpeedLabel.Font = Enum.Font.SourceSansBold
 SpeedLabel.Text = "速度"
 SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 SpeedLabel.TextScaled = true
 SpeedLabel.TextWrapped = true
 
--- 速度輸入框
 local SpeedInputBox = Instance.new("TextBox")
 SpeedInputBox.Name = "SpeedInputBox"
-SpeedInputBox.Parent = SpeedControlFrame
-SpeedInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SpeedInputBox.Parent = ControlFrame
+SpeedInputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 SpeedInputBox.BackgroundTransparency = 0.3
-SpeedInputBox.BorderColor3 = Color3.fromRGB(0, 255, 0)
-SpeedInputBox.BorderSizePixel = 2
-SpeedInputBox.Position = UDim2.new(0.29, 0, 0.1, 0)
-SpeedInputBox.Size = UDim2.new(0.4, 0, 0.8, 0)
+SpeedInputBox.BorderColor3 = Color3.fromRGB(0, 200, 0)
+SpeedInputBox.BorderSizePixel = 1
+SpeedInputBox.Position = UDim2.new(0.29, 0, 0.05, 0)
+SpeedInputBox.Size = UDim2.new(0.4, 0, 0.25, 0)
 SpeedInputBox.Font = Enum.Font.SourceSans
-SpeedInputBox.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
+SpeedInputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
 SpeedInputBox.PlaceholderText = "1-500"
 SpeedInputBox.Text = "8"
 SpeedInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -899,62 +957,48 @@ SpeedInputBox.TextScaled = true
 SpeedInputBox.TextWrapped = true
 SpeedInputBox.ClearTextOnFocus = false
 
--- 速度設定按鈕
 local SetSpeedButton = Instance.new("TextButton")
 SetSpeedButton.Name = "SetSpeedButton"
-SetSpeedButton.Parent = SpeedControlFrame
-SetSpeedButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+SetSpeedButton.Parent = ControlFrame
+SetSpeedButton.BackgroundColor3 = Color3.fromRGB(40, 140, 220)
 SetSpeedButton.BackgroundTransparency = 0.5
-SetSpeedButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-SetSpeedButton.BorderSizePixel = 2
-SetSpeedButton.Position = UDim2.new(0.71, 0, 0.1, 0)
-SetSpeedButton.Size = UDim2.new(0.27, 0, 0.8, 0)
+SetSpeedButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+SetSpeedButton.BorderSizePixel = 1
+SetSpeedButton.Position = UDim2.new(0.71, 0, 0.05, 0)
+SetSpeedButton.Size = UDim2.new(0.27, 0, 0.25, 0)
 SetSpeedButton.Font = Enum.Font.SourceSansBold
 SetSpeedButton.Text = "設定"
 SetSpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 SetSpeedButton.TextScaled = true
 SetSpeedButton.TextWrapped = true
 
--- ==================== 距離控制區 ====================
-local DistanceControlFrame = Instance.new("Frame")
-DistanceControlFrame.Name = "DistanceControlFrame"
-DistanceControlFrame.Parent = c00ltpframe
-DistanceControlFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-DistanceControlFrame.BackgroundTransparency = 0.3
-DistanceControlFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
-DistanceControlFrame.BorderSizePixel = 2
-DistanceControlFrame.Position = UDim2.new(0.30, 0, 0.52, 0)
-DistanceControlFrame.Size = UDim2.new(0.67, 0, 0.18, 0)
-DistanceControlFrame.Visible = true
-
--- 距離標籤
+-- 距離控制
 local DistanceLabel = Instance.new("TextLabel")
 DistanceLabel.Name = "DistanceLabel"
-DistanceLabel.Parent = DistanceControlFrame
-DistanceLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DistanceLabel.Parent = ControlFrame
+DistanceLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 DistanceLabel.BackgroundTransparency = 0.5
-DistanceLabel.BorderColor3 = Color3.fromRGB(0, 255, 0)
-DistanceLabel.BorderSizePixel = 2
-DistanceLabel.Position = UDim2.new(0.02, 0, 0.1, 0)
-DistanceLabel.Size = UDim2.new(0.25, 0, 0.8, 0)
+DistanceLabel.BorderColor3 = Color3.fromRGB(0, 200, 0)
+DistanceLabel.BorderSizePixel = 1
+DistanceLabel.Position = UDim2.new(0.02, 0, 0.35, 0)
+DistanceLabel.Size = UDim2.new(0.25, 0, 0.25, 0)
 DistanceLabel.Font = Enum.Font.SourceSansBold
 DistanceLabel.Text = "距離"
 DistanceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 DistanceLabel.TextScaled = true
 DistanceLabel.TextWrapped = true
 
--- 距離輸入框
 local DistanceInputBox = Instance.new("TextBox")
 DistanceInputBox.Name = "DistanceInputBox"
-DistanceInputBox.Parent = DistanceControlFrame
-DistanceInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DistanceInputBox.Parent = ControlFrame
+DistanceInputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 DistanceInputBox.BackgroundTransparency = 0.3
-DistanceInputBox.BorderColor3 = Color3.fromRGB(0, 255, 0)
-DistanceInputBox.BorderSizePixel = 2
-DistanceInputBox.Position = UDim2.new(0.29, 0, 0.1, 0)
-DistanceInputBox.Size = UDim2.new(0.4, 0, 0.8, 0)
+DistanceInputBox.BorderColor3 = Color3.fromRGB(0, 200, 0)
+DistanceInputBox.BorderSizePixel = 1
+DistanceInputBox.Position = UDim2.new(0.29, 0, 0.35, 0)
+DistanceInputBox.Size = UDim2.new(0.4, 0, 0.25, 0)
 DistanceInputBox.Font = Enum.Font.SourceSans
-DistanceInputBox.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
+DistanceInputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
 DistanceInputBox.PlaceholderText = "1-3000"
 DistanceInputBox.Text = "10.0"
 DistanceInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -962,21 +1006,152 @@ DistanceInputBox.TextScaled = true
 DistanceInputBox.TextWrapped = true
 DistanceInputBox.ClearTextOnFocus = false
 
--- 距離設定按鈕
 local SetDistanceButton = Instance.new("TextButton")
 SetDistanceButton.Name = "SetDistanceButton"
-SetDistanceButton.Parent = DistanceControlFrame
-SetDistanceButton.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+SetDistanceButton.Parent = ControlFrame
+SetDistanceButton.BackgroundColor3 = Color3.fromRGB(80, 160, 240)
 SetDistanceButton.BackgroundTransparency = 0.5
-SetDistanceButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-SetDistanceButton.BorderSizePixel = 2
-SetDistanceButton.Position = UDim2.new(0.71, 0, 0.1, 0)
-SetDistanceButton.Size = UDim2.new(0.27, 0, 0.8, 0)
+SetDistanceButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+SetDistanceButton.BorderSizePixel = 1
+SetDistanceButton.Position = UDim2.new(0.71, 0, 0.35, 0)
+SetDistanceButton.Size = UDim2.new(0.27, 0, 0.25, 0)
 SetDistanceButton.Font = Enum.Font.SourceSansBold
 SetDistanceButton.Text = "設定"
 SetDistanceButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 SetDistanceButton.TextScaled = true
 SetDistanceButton.TextWrapped = true
+
+-- 底部按鈕
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Parent = ControlFrame
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(220, 180, 80)
+MinimizeButton.BackgroundTransparency = 0.5
+MinimizeButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+MinimizeButton.BorderSizePixel = 1
+MinimizeButton.Position = UDim2.new(0.02, 0, 0.65, 0)
+MinimizeButton.Size = UDim2.new(0.46, 0, 0.25, 0)
+MinimizeButton.Font = Enum.Font.SourceSansBold
+MinimizeButton.Text = "縮小"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextScaled = true
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = ControlFrame
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseButton.BackgroundTransparency = 0.5
+CloseButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+CloseButton.BorderSizePixel = 1
+CloseButton.Position = UDim2.new(0.52, 0, 0.65, 0)
+CloseButton.Size = UDim2.new(0.46, 0, 0.25, 0)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.Text = "關閉"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextScaled = true
+
+-- 標題
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Parent = c00ltpframe
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Title.BackgroundTransparency = 0.5
+Title.BorderColor3 = Color3.fromRGB(0, 200, 0)
+Title.BorderSizePixel = 1
+Title.Position = UDim2.new(0, 0, -0.15, 0)
+Title.Size = UDim2.new(1, 0, 0.15, 0)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "距離維持系統"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextScaled = true
+Title.TextWrapped = true
+Title.TextStrokeColor3 = Color3.fromRGB(0, 255, 0)
+Title.TextStrokeTransparency = 0.5
+Title.TextXAlignment = Enum.TextXAlignment.Center
+
+-- ==================== 拖動功能 ====================
+local UserInputService = game:GetService("UserInputService")
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+local function update(input)
+    if not dragging then return end
+    local delta = input.Position - dragStart
+    c00ltpframe.Position = UDim2.new(
+        startPos.X.Scale, 
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale, 
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+-- 創建一個透明的拖動區域（用於縮小狀態）
+local dragArea = Instance.new("Frame")
+dragArea.Name = "DragArea"
+dragArea.Parent = c00ltpframe
+dragArea.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+dragArea.BackgroundTransparency = 1  -- 完全透明
+dragArea.BorderSizePixel = 0
+dragArea.Size = UDim2.new(1, 0, 1, 0)
+dragArea.ZIndex = 0  -- 確保在底層
+dragArea.Visible = false  -- 初始隱藏
+
+-- 通用拖動函數
+local function setupDrag()
+    -- 在拖動區域上添加拖動功能
+    dragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = c00ltpframe.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    dragArea.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    -- 在標題上添加拖動功能（展開狀態）
+    Title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = c00ltpframe.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    Title.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    -- 全局輸入監聽
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+-- 初始化拖動功能
+setupDrag()
 
 -- ==================== 玩家選擇系統 ====================
 local Players = game:GetService("Players")
@@ -1009,9 +1184,9 @@ local function updatePlayerInfo(player)
             MaintainButton.Image = "rbxassetid://7072725342" -- 維持圖標
         end
     else
-        PlayerName.Text = "請選擇玩家"
+        PlayerName.Text = "選擇玩家"
         PlayerIDs.Text = "ID: -"
-        PlayerFar.Text = "距離: -"
+        PlayerFar.Text = "距: -"
         PlayerProfiles.Image = "rbxassetid://12222223187"
     end
 end
@@ -1019,7 +1194,7 @@ end
 -- 更新距離顯示
 local function updateDistance()
     if not currentSelectedPlayer then 
-        PlayerFar.Text = "距離: -"
+        PlayerFar.Text = "距: -"
         return 
     end
     
@@ -1033,16 +1208,23 @@ local function updateDistance()
         if targetRoot and localRoot then
             local distance = (targetRoot.Position - localRoot.Position).Magnitude
             if DistanceMaintainSystem.IsMaintaining and DistanceMaintainSystem._currentTarget == currentSelectedPlayer then
-                local lockText = DistanceMaintainSystem.LockHeight and " (高度鎖定)" or ""
-                PlayerFar.Text = string.format("距離: %d (維持: %.1f)%s", math.floor(distance + 0.5), DistanceMaintainSystem.TargetDistance, lockText)
+                local lockText = ""
+                if DistanceMaintainSystem.LockHeight and DistanceMaintainSystem.LockXAxis then
+                    lockText = " (鎖)"
+                elseif DistanceMaintainSystem.LockHeight then
+                    lockText = " (高鎖)"
+                elseif DistanceMaintainSystem.LockXAxis then
+                    lockText = " (X鎖)"
+                end
+                PlayerFar.Text = string.format("距: %d (%.1f)%s", math.floor(distance + 0.5), DistanceMaintainSystem.TargetDistance, lockText)
             else
-                PlayerFar.Text = string.format("距離: %d", math.floor(distance + 0.5))
+                PlayerFar.Text = string.format("距: %d", math.floor(distance + 0.5))
             end
         else
-            PlayerFar.Text = "距離: -"
+            PlayerFar.Text = "距: -"
         end
     else
-        PlayerFar.Text = "距離: -"
+        PlayerFar.Text = "距: -"
     end
 end
 
@@ -1058,20 +1240,20 @@ local function createPlayerSelection()
     playerSelectionFrame.Parent = c00ltpgui
     playerSelectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     playerSelectionFrame.BackgroundTransparency = 0.2
-    playerSelectionFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
-    playerSelectionFrame.BorderSizePixel = 3
-    playerSelectionFrame.Position = UDim2.new(0.38, 0, 0.05, 0)
-    playerSelectionFrame.Size = UDim2.new(0.3, 0, 0.5, 0)
+    playerSelectionFrame.BorderColor3 = Color3.fromRGB(0, 200, 0)
+    playerSelectionFrame.BorderSizePixel = 2
+    playerSelectionFrame.Position = UDim2.new(0.25, 0, 0.1, 0)
+    playerSelectionFrame.Size = UDim2.new(0.2, 0, 0.4, 0)
     playerSelectionFrame.Visible = true
     playerSelectionFrame.ZIndex = 10
     
     local title = Instance.new("TextLabel")
     title.Name = "Title"
     title.Parent = playerSelectionFrame
-    title.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     title.BackgroundTransparency = 0.5
-    title.BorderColor3 = Color3.fromRGB(0, 255, 0)
-    title.BorderSizePixel = 2
+    title.BorderColor3 = Color3.fromRGB(0, 200, 0)
+    title.BorderSizePixel = 1
     title.Position = UDim2.new(0, 0, 0, 0)
     title.Size = UDim2.new(1, 0, 0.1, 0)
     title.Font = Enum.Font.SourceSansBold
@@ -1082,10 +1264,10 @@ local function createPlayerSelection()
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
     closeButton.Parent = playerSelectionFrame
-    closeButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+    closeButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
     closeButton.BackgroundTransparency = 0.5
-    closeButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-    closeButton.BorderSizePixel = 2
+    closeButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+    closeButton.BorderSizePixel = 1
     closeButton.Position = UDim2.new(0.9, 0, 0.02, 0)
     closeButton.Size = UDim2.new(0.08, 0, 0.06, 0)
     closeButton.Font = Enum.Font.SourceSansBold
@@ -1101,18 +1283,18 @@ local function createPlayerSelection()
     local scrollFrame = Instance.new("ScrollingFrame")
     scrollFrame.Name = "PlayerScrollFrame"
     scrollFrame.Parent = playerSelectionFrame
-    scrollFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     scrollFrame.BackgroundTransparency = 0.3
     scrollFrame.BorderSizePixel = 0
     scrollFrame.Position = UDim2.new(0.02, 0, 0.12, 0)
     scrollFrame.Size = UDim2.new(0.96, 0, 0.86, 0)
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scrollFrame.ScrollBarThickness = 8
+    scrollFrame.ScrollBarThickness = 6
     
     local playerListLayout = Instance.new("UIListLayout")
     playerListLayout.Parent = scrollFrame
     playerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    playerListLayout.Padding = UDim.new(0, 5)
+    playerListLayout.Padding = UDim.new(0, 3)
     
     -- 獲取所有玩家
     local allPlayers = Players:GetPlayers()
@@ -1125,11 +1307,11 @@ local function createPlayerSelection()
             local playerButton = Instance.new("TextButton")
             playerButton.Name = "PlayerButton_" .. player.Name
             playerButton.Parent = scrollFrame
-            playerButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            playerButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             playerButton.BackgroundTransparency = 0.5
-            playerButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
-            playerButton.BorderSizePixel = 2
-            playerButton.Size = UDim2.new(0.96, 0, 0, 50)
+            playerButton.BorderColor3 = Color3.fromRGB(0, 200, 0)
+            playerButton.BorderSizePixel = 1
+            playerButton.Size = UDim2.new(0.96, 0, 0, 40)
             playerButton.Font = Enum.Font.SourceSans
             playerButton.Text = player.Name
             playerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1147,16 +1329,16 @@ local function createPlayerSelection()
     end
     
     -- 更新滾動區域大小
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, playerCount * 55)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, playerCount * 43)
     
     if playerCount == 0 then
         local noPlayersLabel = Instance.new("TextLabel")
         noPlayersLabel.Name = "NoPlayersLabel"
         noPlayersLabel.Parent = scrollFrame
         noPlayersLabel.BackgroundTransparency = 1
-        noPlayersLabel.Size = UDim2.new(1, 0, 0, 50)
+        noPlayersLabel.Size = UDim2.new(1, 0, 0, 40)
         noPlayersLabel.Font = Enum.Font.SourceSans
-        noPlayersLabel.Text = "沒有其他玩家"
+        noPlayersLabel.Text = "無其他玩家"
         noPlayersLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
         noPlayersLabel.TextScaled = true
     end
@@ -1167,69 +1349,89 @@ local function toggleMinimize()
     isMinimized = not isMinimized
     
     if isMinimized then
-        -- 縮小狀態：非常小的界面
-        c00ltpframe.Size = UDim2.new(0.15, 0, 0.12, 0)
-        SpeedControlFrame.Visible = false
-        DistanceControlFrame.Visible = false
+        -- 縮小狀態：只顯示三個按鈕，隱藏標題，顯示拖動區域
+        c00ltpframe.Size = UDim2.new(0.15, 0, 0.08, 0)
+        
+        -- 顯示拖動區域（在按鈕下方）
+        dragArea.Visible = true
+        dragArea.ZIndex = 0  -- 確保在底層
+        
+        -- 隱藏所有其他元素
+        Title.Visible = false
         PlayerProfiles.Visible = false
         PlayerName.Visible = false
         PlayerIDs.Visible = false
         PlayerFar.Visible = false
-        Title.Visible = false
+        ControlFrame.Visible = false
         
-        -- 重新定位和調整按鈕為更小的尺寸
+        -- 只顯示三個基本按鈕
+        MaintainButton.Visible = true
         MaintainButton.Position = UDim2.new(0.02, 0, 0.15, 0)
-        MaintainButton.Size = UDim2.new(0.46, 0, 0.35, 0)
+        MaintainButton.Size = UDim2.new(0.30, 0, 0.35, 0)
+        MaintainButton.ZIndex = 1  -- 確保在拖動區域之上
         
-        PlayersListButton.Position = UDim2.new(0.52, 0, 0.15, 0)
-        PlayersListButton.Size = UDim2.new(0.46, 0, 0.35, 0)
+        PlayersListButton.Visible = true
+        PlayersListButton.Position = UDim2.new(0.34, 0, 0.15, 0)
+        PlayersListButton.Size = UDim2.new(0.30, 0, 0.35, 0)
+        PlayersListButton.ZIndex = 1
         
-        MinimizeButton.Position = UDim2.new(0.02, 0, 0.55, 0)
-        MinimizeButton.Size = UDim2.new(0.96, 0, 0.35, 0)
+        -- 將MinimizeButton移動到主框架
+        MinimizeButton.Parent = c00ltpframe
+        MinimizeButton.Visible = true
+        MinimizeButton.Position = UDim2.new(0.68, 0, 0.15, 0)
+        MinimizeButton.Size = UDim2.new(0.30, 0, 0.35, 0)
         MinimizeButton.Text = "展開"
+        MinimizeButton.ZIndex = 1
         
         -- 隱藏其他按鈕
         StopMaintainButton.Visible = false
         AutoNoClipButton.Visible = false
         DirectPathButton.Visible = false
         HeightLockButton.Visible = false
+        XAxisLockButton.Visible = false
         SkipButton.Visible = false
         
-        CloseButton.Position = UDim2.new(0, 0, 0, 0)
-        CloseButton.Size = UDim2.new(0.15, 0, 0.15, 0)
-        CloseButton.Text = "X"
     else
-        -- 展開狀態：顯示所有內容
-        c00ltpframe.Size = UDim2.new(0.35, 0, 0.55, 0)
-        SpeedControlFrame.Visible = true
-        DistanceControlFrame.Visible = true
+        -- 展開狀態：顯示所有內容，隱藏拖動區域
+        c00ltpframe.Size = UDim2.new(0.22, 0, 0.28, 0)
+        
+        -- 隱藏拖動區域
+        dragArea.Visible = false
+        
+        -- 顯示所有元素
+        Title.Visible = true
         PlayerProfiles.Visible = true
         PlayerName.Visible = true
         PlayerIDs.Visible = true
         PlayerFar.Visible = true
-        Title.Visible = true
+        ControlFrame.Visible = true
         
-        -- 恢復按鈕位置
-        MaintainButton.Position = UDim2.new(1.02, 0, 0.08, 0)
-        MaintainButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        -- 恢復按鈕位置和大小
+        MaintainButton.Visible = true
+        MaintainButton.Position = UDim2.new(0.03, 0, 0.37, 0)
+        MaintainButton.Size = UDim2.new(0.22, 0, 0.12, 0)
+        MaintainButton.ZIndex = 1
         
-        PlayersListButton.Position = UDim2.new(1.28, 0, 0.08, 0)
-        PlayersListButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        PlayersListButton.Visible = true
+        PlayersListButton.Position = UDim2.new(0.27, 0, 0.37, 0)
+        PlayersListButton.Size = UDim2.new(0.22, 0, 0.12, 0)
+        PlayersListButton.ZIndex = 1
         
+        -- 將MinimizeButton移回ControlFrame
+        MinimizeButton.Parent = ControlFrame
+        MinimizeButton.Visible = true
         MinimizeButton.Text = "縮小"
-        MinimizeButton.Position = UDim2.new(1.28, 0, 0.44, 0)
-        MinimizeButton.Size = UDim2.new(0.25, 0, 0.16, 0)
+        MinimizeButton.Position = UDim2.new(0.02, 0, 0.65, 0)
+        MinimizeButton.Size = UDim2.new(0.46, 0, 0.25, 0)
+        MinimizeButton.ZIndex = 1
         
         -- 顯示其他按鈕
         StopMaintainButton.Visible = true
         AutoNoClipButton.Visible = true
         DirectPathButton.Visible = true
         HeightLockButton.Visible = true
+        XAxisLockButton.Visible = true
         SkipButton.Visible = true
-        
-        CloseButton.Position = UDim2.new(0.70, 0, 0.94, 0)
-        CloseButton.Size = UDim2.new(0.29, 0, 0.05, 0)
-        CloseButton.Text = "關閉視窗"
     end
 end
 
@@ -1241,18 +1443,18 @@ end
 
 -- 速度輸入框焦點事件
 SpeedInputBox.Focused:Connect(function()
-    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 60)
+    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 80)
 end)
 
 SpeedInputBox.FocusLost:Connect(function()
-    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    SpeedInputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     -- 失去焦點時自動更新
     local inputText = SpeedInputBox.Text
     if inputText and inputText ~= "" then
         local success, message = SpeedInputSystem:SetSpeedByInput(inputText)
         if success then
             updateSpeedDisplay()
-            SpeedInputBox.PlaceholderText = "速度已設定"
+            SpeedInputBox.PlaceholderText = "已設定"
         else
             SpeedInputBox.PlaceholderText = message
         end
@@ -1268,7 +1470,7 @@ SetSpeedButton.MouseButton1Click:Connect(function()
     
     if success then
         updateSpeedDisplay()
-        SpeedInputBox.PlaceholderText = "速度已設定"
+        SpeedInputBox.PlaceholderText = "已設定"
     else
         local originalText = SpeedInputBox.Text
         SpeedInputBox.Text = ""
@@ -1286,11 +1488,11 @@ end
 
 -- 距離輸入框焦點事件
 DistanceInputBox.Focused:Connect(function()
-    DistanceInputBox.BackgroundColor3 = Color3.fromRGB(30, 60, 30)
+    DistanceInputBox.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
 end)
 
 DistanceInputBox.FocusLost:Connect(function()
-    DistanceInputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    DistanceInputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     -- 失去焦點時自動更新
     local inputText = DistanceInputBox.Text
     if inputText and inputText ~= "" then
@@ -1300,12 +1502,12 @@ DistanceInputBox.FocusLost:Connect(function()
             if success then
                 updateDistanceDisplay()
                 updateDistance()
-                DistanceInputBox.PlaceholderText = "距離已設定"
+                DistanceInputBox.PlaceholderText = "已設定"
             else
                 DistanceInputBox.PlaceholderText = message
             end
         else
-            DistanceInputBox.PlaceholderText = "請輸入數字"
+            DistanceInputBox.PlaceholderText = "數字"
         end
         task.wait(1)
         DistanceInputBox.PlaceholderText = "1-3000"
@@ -1316,7 +1518,7 @@ end)
 SetDistanceButton.MouseButton1Click:Connect(function()
     local inputText = DistanceInputBox.Text
     if not inputText or inputText == "" then
-        DistanceInputBox.PlaceholderText = "請輸入距離"
+        DistanceInputBox.PlaceholderText = "輸入距離"
         task.wait(1)
         DistanceInputBox.PlaceholderText = "1-3000"
         return
@@ -1324,7 +1526,7 @@ SetDistanceButton.MouseButton1Click:Connect(function()
     
     local distanceNumber = tonumber(inputText)
     if not distanceNumber then
-        DistanceInputBox.PlaceholderText = "請輸入有效的數字"
+        DistanceInputBox.PlaceholderText = "有效數字"
         task.wait(1.5)
         DistanceInputBox.PlaceholderText = "1-3000"
         return
@@ -1334,7 +1536,7 @@ SetDistanceButton.MouseButton1Click:Connect(function()
     if success then
         updateDistanceDisplay()
         updateDistance()
-        DistanceInputBox.PlaceholderText = "距離已設定"
+        DistanceInputBox.PlaceholderText = "已設定"
     else
         local originalText = DistanceInputBox.Text
         DistanceInputBox.Text = ""
@@ -1351,11 +1553,27 @@ HeightLockButton.MouseButton1Click:Connect(function()
     local success, message = DistanceMaintainSystem:ToggleHeightLock()
     if success then
         if DistanceMaintainSystem.LockHeight then
-            HeightLockButton.BackgroundColor3 = Color3.fromRGB(120, 60, 255)
-            HeightLockButton.Text = "高度鎖定: ✓"
+            HeightLockButton.BackgroundColor3 = Color3.fromRGB(100, 40, 200)
+            HeightLockButton.Text = "高鎖✓"
         else
-            HeightLockButton.BackgroundColor3 = Color3.fromRGB(180, 120, 255)
-            HeightLockButton.Text = "高度鎖定: ✗"
+            HeightLockButton.BackgroundColor3 = Color3.fromRGB(140, 80, 220)
+            HeightLockButton.Text = "高鎖"
+        end
+        updateDistance()
+    end
+end)
+
+-- ==================== X軸鎖定功能實現 ====================
+-- X軸鎖定按鈕事件
+XAxisLockButton.MouseButton1Click:Connect(function()
+    local success, message = DistanceMaintainSystem:ToggleXAxisLock()
+    if success then
+        if DistanceMaintainSystem.LockXAxis then
+            XAxisLockButton.BackgroundColor3 = Color3.fromRGB(200, 40, 100)
+            XAxisLockButton.Text = "X鎖✓"
+        else
+            XAxisLockButton.BackgroundColor3 = Color3.fromRGB(220, 80, 140)
+            XAxisLockButton.Text = "X鎖"
         end
         updateDistance()
     end
@@ -1399,7 +1617,7 @@ StopMaintainButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- 縮小按鈕事件
+-- 縮小按鈕事件 - 修改為支持點擊展開
 MinimizeButton.MouseButton1Click:Connect(function()
     toggleMinimize()
 end)
@@ -1414,11 +1632,11 @@ end)
 AutoNoClipButton.MouseButton1Click:Connect(function()
     DistanceMaintainSystem.AutoNoClipEnabled = not DistanceMaintainSystem.AutoNoClipEnabled
     if DistanceMaintainSystem.AutoNoClipEnabled then
-        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(60, 255, 120)
-        AutoNoClipButton.Text = "飛行穿牆: ✓"
+        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(40, 200, 100)
+        AutoNoClipButton.Text = "穿牆✓"
     else
-        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-        AutoNoClipButton.Text = "飛行穿牆: ✗"
+        AutoNoClipButton.BackgroundColor3 = Color3.fromRGB(180, 80, 80)
+        AutoNoClipButton.Text = "穿牆"
     end
 end)
 
@@ -1426,11 +1644,11 @@ end)
 DirectPathButton.MouseButton1Click:Connect(function()
     DistanceMaintainSystem.UseDirectPath = not DistanceMaintainSystem.UseDirectPath
     if DistanceMaintainSystem.UseDirectPath then
-        DirectPathButton.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-        DirectPathButton.Text = "直線飛行: ✓"
+        DirectPathButton.BackgroundColor3 = Color3.fromRGB(40, 160, 240)
+        DirectPathButton.Text = "直線✓"
     else
-        DirectPathButton.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
-        DirectPathButton.Text = "直線飛行: ✗"
+        DirectPathButton.BackgroundColor3 = Color3.fromRGB(200, 140, 80)
+        DirectPathButton.Text = "直線"
     end
 end)
 
@@ -1547,19 +1765,28 @@ updateDistanceDisplay()
 initializePlayerSelection()
 
 -- ==================== 提示信息 ====================
-print("距離維持系統已加載")
+print("距離維持系統已加載 (緊湊版)")
 print("速度控制功能已啟用")
 print("距離控制功能已啟用")
 print("高度鎖定功能已啟用")
+print("X軸鎖定功能已啟用")
+print("自動重製清理功能已啟用")
+print("拖動功能已啟用 - 在任何狀態下都可拖動窗口")
+print("展開狀態: 可拖動標題欄移動窗口")
+print("縮小狀態: 可拖動按鈕之間的空隙或邊緣移動窗口")
 print("當前速度:", SpeedInputSystem.CurrentSpeed)
 print("維持距離:", DistanceMaintainSystem.TargetDistance)
 print("使用說明:")
-print("1. 點擊'玩家列表'選擇要維持距離的玩家")
+print("1. 點擊'列表'選擇要維持距離的玩家")
 print("2. 點擊維持按鈕開始/停止維持距離")
 print("3. 在速度輸入框輸入數值並點擊設定按鈕 (1-500)")
 print("4. 在距離輸入框輸入數值並點擊設定按鈕 (1-3000)")
-print("5. 點擊'高度鎖定'按鈕啟用/關閉高度鎖定")
-print("6. 高度鎖定啟用後，角色不會上下浮動")
+print("5. 點擊'高鎖'按鈕啟用/關閉高度鎖定")
+print("6. 點擊'X鎖'按鈕啟用/關閉X軸鎖定")
+print("7. 重製角色時系統會自動停止維持並清理")
+print("8. 展開狀態: 可拖動標題欄移動窗口")
+print("9. 縮小狀態: 可拖動窗口任意位置移動（避開按鈕區域）")
+print("10. 縮小後點擊'展開'按鈕可恢復原大小")
 
 -- ==================== 清理函數 ====================
 local function cleanup()
@@ -1576,13 +1803,19 @@ local function cleanup()
     end
 end
 
--- 遊戲退出時清理
+-- 監聽角色重製事件（自動清理）
 LocalPlayer.CharacterRemoving:Connect(function()
-    cleanup()
+    DistanceMaintainSystem:CleanupFlight()
 end)
 
+-- 監聽遊戲關閉事件
 game:GetService("UserInputService").WindowFocused:Connect(function(focused)
     if not focused then
         DistanceMaintainSystem:StopMaintaining()
     end
+end)
+
+-- 監聽遊戲關閉事件
+game:BindToClose(function()
+    cleanup()
 end)
