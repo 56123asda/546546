@@ -1,0 +1,1676 @@
+local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+
+-- ************************ 移除白名單驗證，直接進入功能 ************************
+local LocalPlayer = Players.LocalPlayer
+while not LocalPlayer do
+    Players.PlayerAdded:Wait()
+    LocalPlayer = Players.LocalPlayer
+end
+
+-- 發送歡迎通知
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "小傑腳本",
+        Text = string.format("歡迎 %s，正在加載腳本...", LocalPlayer.Name),
+        Duration = 5,
+    })
+end)
+
+warn("小傑腳本已啟動，開始加載功能")
+
+-- ************************ 以下為原腳本本地核心功能（完整保留） ************************
+
+-- 加載 WindUI
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+end)
+
+if not success or not WindUI then
+    game:GetService("StarterGui"):SetCore("SendNotification",{
+        Title = "錯誤",
+        Text = "UI 加載失敗",
+        Duration = 5;
+    })
+    return
+end
+
+-- 設置白色主題
+WindUI:SetTheme("Light")
+-- 基本通知
+WindUI:Notify({
+    Title = "小傑腳本",
+    Content = "加載中",
+    Duration = 5,
+})
+
+task.wait(1)
+
+-- 服務初始化
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- 全局變量存儲
+_G.ToggleStates = _G.ToggleStates or {}
+local translateSpeed = 50
+local translateConnection = nil
+local translateAccelEnabled = false
+local _G = _G or getfenv(0)._G
+_G.FastAttack = _G.FastAttack ~= nil and _G.FastAttack or true
+
+-- 創建主窗口
+local Window = WindUI:CreateWindow({
+    Title = "小傑腳本中心",
+    Icon = "rbxassetid://6031280882",
+    Author = "小傑",
+    Folder = "WindUI",
+    Size = UDim2.fromOffset(580, 460),
+    Transparent = false,
+    Theme = "Light",
+    ScrollBarEnabled = true,
+})
+
+-- N 快捷鍵開關 UI (已從 G 改為 N)
+Window:SetToggleKey(Enum.KeyCode.N)
+
+-- 創建所有標籤頁
+local Tabs = {}
+
+-- 創建分區
+local noticeSection = Window:Section({ Title = "公告區", Opened = true })
+local functionSection = Window:Section({ Title = "主要功能", Opened = true })
+local configSection = Window:Section({ Title = "主題配置", Opened = true })
+
+Tabs.NoticeTab = noticeSection:Tab({ Title = "公告", Icon = "info" })
+Tabs.GeneralTab = functionSection:Tab({ Title = "功能1", Icon = "settings" })
+Tabs.AttackTab = functionSection:Tab({ Title = "範圍攻擊", Icon = "sword" })
+Tabs.ESPTab = functionSection:Tab({ Title = "透視", Icon = "eye" })
+Tabs.TeleportTab = functionSection:Tab({ Title = "傳送", Icon = "map-pin" })
+Tabs.ActivityTab = functionSection:Tab({ Title = "功能2", Icon = "zap" })
+Tabs.texiaoTab = configSection:Tab({ Title = "更改特效", Icon = "palette" })
+Tabs.ThemeTab = configSection:Tab({ Title = "主題顏色", Icon = "palette" })
+
+-- ===================== 公告標籤頁 =====================
+Tabs.NoticeTab:Paragraph({
+    Title = "小傑腳本中心",
+    Desc = "小傑製作\n最大幫助者 Aotsg\n腳本測試中\n禁止亂打\n禁止亂打\n禁止亂打",
+    Image = "info",
+    Color = "Red"
+})
+
+Tabs.NoticeTab:Divider()
+
+Tabs.NoticeTab:Paragraph({
+    Title = "快捷鍵說明",
+    Desc = "N: 開關界面 (已從 G 改為 N)",
+    Image = "keyboard",
+    Color = "Green"
+})
+
+-- ===================== 通用標籤頁 =====================
+local currentZoom = 128
+Tabs.GeneralTab:Slider({
+    Title = "視角縮放距離",
+    Value = { Min = 128, Max = 10000, Default = 128 },
+    Callback = function(value)
+        currentZoom = value
+        LocalPlayer.CameraMaxZoomDistance = value
+        WindUI:Notify({ Title = "視角縮放", Content = "已設置為: " .. value, Duration = 2 })
+    end
+})
+
+Tabs.GeneralTab:Divider()
+
+Tabs.GeneralTab:Input({
+    Title = "速度",
+    Value = "50",
+    Placeholder = "輸入速度值",
+    Callback = function(value)
+        local speed = tonumber(value)
+        if speed then
+            translateSpeed = speed
+            WindUI:Notify({ Title = "速度設置", Content = "速度已設置為: " .. speed, Duration = 2 })
+        end
+    end
+})
+
+Tabs.GeneralTab:Toggle({
+    Title = "加速開關",
+    Value = false,
+    Callback = function(state)
+        translateAccelEnabled = state
+        if translateConnection then
+            translateConnection:Disconnect()
+            translateConnection = nil
+        end
+        if state then
+            translateConnection = RunService.Heartbeat:Connect(function()
+                local char = LocalPlayer.Character
+                if not char then return end
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if not humanoid or humanoid.Health <= 0 then return end
+                if humanoid.MoveDirection.Magnitude > 0 then
+                    local moveDirection = humanoid.MoveDirection
+                    local acceleration = moveDirection * translateSpeed / 30
+                    char:TranslateBy(acceleration)
+                end
+            end)
+            WindUI:Notify({ Title = "加速", Content = "加速已開啟", Duration = 2 })
+        else
+            WindUI:Notify({ Title = "加速", Content = "加速已關閉", Duration = 2 })
+        end
+    end
+})
+
+Tabs.GeneralTab:Divider()
+
+Tabs.GeneralTab:Button({
+    Title = "飛行",
+    Icon = "wind",
+    Callback = function()
+        WindUI:Notify({ Title = "飛行", Content = "正在加載飛行腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/zo%20vu/%E9%9D%9E"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "傳送",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "傳送", Content = "正在加載追蹤腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E8%BF%BD"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "拉距離",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "", Content = "正在加載拉距離腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E6%8B%89%E8%B7%9D%E9%9B%A2"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "地下城",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "地下城", Content = "正在加載地下城腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%9C%B0%E4%B8%8B"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "減畫質",
+    Icon = "monitor",
+    Callback = function()
+        WindUI:Notify({ Title = "減畫質", Content = "正在加載畫質優化腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E7%95%AB%E8%B3%AA"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "移除岩漿",
+    Icon = "flame",
+    Callback = function()
+        WindUI:Notify({ Title = "移除岩漿", Content = "正在加載移除岩漿腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%B2%A9%E6%BC%BF"))()
+        end)
+    end
+})
+
+Tabs.GeneralTab:Button({
+    Title = "移除霧",
+    Icon = "cloud-off",
+    Callback = function()
+        WindUI:Notify({ Title = "移除霧", Content = "正在加載移除霧腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E9%9C%A7"))()
+        end)
+    end
+})
+
+-- ===================== 新的範圍攻擊系統 =====================
+
+-- 服務初始化
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+-- 獲取必要的遠程服務
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+local Net = Modules:WaitForChild("Net")
+local RegisterAttack = Net:WaitForChild("RE/RegisterAttack")
+local RegisterHit = Net:WaitForChild("RE/RegisterHit")
+local ShootGunEvent = Net:WaitForChild("RE/ShootGunEvent")
+
+-- 攻擊配置
+local AttackConfig = {
+    Enabled = true,
+    AttackDistance = 5000,
+    AttackDelay = 0.3,
+    AttackMobs = true,
+    AttackPlayers = true,
+    MaxCombo = 3,
+    ComboResetTime = 0.3
+}
+
+-- 攻擊系統類
+local UniversalAttack = {}
+UniversalAttack.__index = UniversalAttack
+
+function UniversalAttack.new()
+    local self = setmetatable({
+        Debounce = 0,
+        ComboDebounce = 0,
+        ShootDebounce = 0,
+        M1Combo = 0,
+        EnemyRootPart = nil,
+        LastAttackTime = 0,
+        LastScanTime = 0,
+        CachedTargets = {},
+        AttackConnection = nil
+    }, UniversalAttack)
+    
+    return self
+end
+
+function UniversalAttack:IsTargetAlive(target)
+    local humanoid = target and target:FindFirstChild("Humanoid")
+    return humanoid and humanoid.Health > 0
+end
+
+function UniversalAttack:GetAllTargets(character)
+    local currentTime = tick()
+    if currentTime - self.LastScanTime < 0.3 and #self.CachedTargets > 0 then
+        return self.CachedTargets
+    end
+    
+    local targets = {}
+    local characterPos = character and character:GetPivot().Position
+    
+    if not characterPos then
+        self.CachedTargets = targets
+        return targets
+    end
+    
+    if AttackConfig.AttackMobs then
+        local enemies = Workspace:FindFirstChild("Enemies")
+        if enemies then
+            for _, enemy in ipairs(enemies:GetChildren()) do
+                if enemy ~= character and self:IsTargetAlive(enemy) then
+                    local rootPart = enemy:FindFirstChild("HumanoidRootPart")
+                    if rootPart and (characterPos - rootPart.Position).Magnitude <= AttackConfig.AttackDistance then
+                        if not self.EnemyRootPart then
+                            self.EnemyRootPart = rootPart
+                        end
+                        table.insert(targets, {enemy, rootPart})
+                    end
+                end
+            end
+        end
+    end
+    
+    if AttackConfig.AttackPlayers then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local targetChar = player.Character
+                if targetChar and self:IsTargetAlive(targetChar) then
+                    local rootPart = targetChar:FindFirstChild("HumanoidRootPart")
+                    if rootPart and (characterPos - rootPart.Position).Magnitude <= AttackConfig.AttackDistance then
+                        if not self.EnemyRootPart then
+                            self.EnemyRootPart = rootPart
+                        end
+                        table.insert(targets, {targetChar, rootPart})
+                    end
+                end
+            end
+        end
+    end
+    
+    self.LastScanTime = currentTime
+    self.CachedTargets = targets
+    return targets
+end
+
+function UniversalAttack:GetCombo()
+    local currentTime = tick()
+    local combo = (currentTime - self.ComboDebounce) <= AttackConfig.ComboResetTime and self.M1Combo or 0
+    combo = combo >= AttackConfig.MaxCombo and 1 or combo + 1
+    self.ComboDebounce = currentTime
+    self.M1Combo = combo
+    return combo
+end
+
+function UniversalAttack:HandleFruitAttack(character, equipped, combo)
+    local targets = self:GetAllTargets(character)
+    if not targets[1] then return end
+    
+    local fruitRemote = equipped:FindFirstChild("LeftClickRemote")
+    if fruitRemote then
+        local direction = (targets[1][2].Position - character:GetPivot().Position).Unit
+        fruitRemote:FireServer(direction, combo)
+    end
+end
+
+function UniversalAttack:HandleGunAttack(character, equipped)
+    local currentTime = tick()
+    local cooldown = equipped:FindFirstChild("Cooldown") and equipped.Cooldown.Value or 0.3
+    
+    if (currentTime - self.ShootDebounce) < cooldown then return end
+    
+    local targets = self:GetAllTargets(character)
+    if not targets[1] then return end
+    
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+    task.wait(0.05)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    
+    self.ShootDebounce = currentTime
+end
+
+function UniversalAttack:HandleMeleeAttack(character)
+    self.EnemyRootPart = nil
+    local targets = self:GetAllTargets(character)
+    
+    if self.EnemyRootPart then
+        RegisterAttack:FireServer(AttackConfig.AttackDelay)
+        RegisterHit:FireServer(self.EnemyRootPart, targets)
+    end
+end
+
+function UniversalAttack:Attack()
+    if not AttackConfig.Enabled then return end
+    
+    local currentTime = tick()
+    if (currentTime - self.Debounce) < AttackConfig.AttackDelay then return end
+    
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("Humanoid") then return end
+    
+    local equipped = character:FindFirstChildOfClass("Tool")
+    if not equipped then return end
+    
+    local combo = self:GetCombo()
+    self.Debounce = combo >= AttackConfig.MaxCombo and (currentTime + 0.05) or currentTime
+    
+    local toolTip = equipped.ToolTip
+    if toolTip == "Blox Fruit" then
+        self:HandleFruitAttack(character, equipped, combo)
+    elseif toolTip == "Gun" then
+        self:HandleGunAttack(character, equipped)
+    elseif toolTip == "Sword" or toolTip == "Melee" then
+        self:HandleMeleeAttack(character)
+    else
+        self:HandleMeleeAttack(character)
+    end
+    
+    self.LastAttackTime = currentTime
+end
+
+-- 攻擊系統實例和連接
+local attackSystem = UniversalAttack.new()
+local attackConnection = nil
+
+-- 啟動攻擊循環
+local function startAttackLoop()
+    if attackConnection then
+        attackConnection:Disconnect()
+        attackConnection = nil
+    end
+    
+    attackSystem = UniversalAttack.new()
+    
+    attackConnection = RunService.Heartbeat:Connect(function()
+        if AttackConfig.Enabled then
+            pcall(function()
+                attackSystem:Attack()
+            end)
+        end
+    end)
+end
+
+-- 初始化攻擊循環
+startAttackLoop()
+
+-- 角色死亡處理
+LocalPlayer.CharacterAdded:Connect(function(character)
+    task.wait(2)
+    if AttackConfig.Enabled then
+        startAttackLoop()
+    end
+end)
+
+LocalPlayer.CharacterRemoving:Connect(function()
+    if attackConnection then
+        attackConnection:Disconnect()
+        attackConnection = nil
+    end
+end)
+
+-- 修復：角色死亡重生後重新連接功能
+local function ReconnectRemotes()
+    Modules = ReplicatedStorage:WaitForChild("Modules")
+    Net = Modules:WaitForChild("Net")
+    RegisterAttack = Net:WaitForChild("RE/RegisterAttack")
+    RegisterHit = Net:WaitForChild("RE/RegisterHit")
+    ShootGunEvent = Net:WaitForChild("RE/ShootGunEvent")
+end
+
+local function OnCharacterRespawn()
+    ReconnectRemotes()
+    
+    if AttackConfig.Enabled then
+        task.wait(1)
+        startAttackLoop()
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function(character)
+    task.wait(2)
+    OnCharacterRespawn()
+end)
+
+-- ===================== 範圍攻擊標籤頁 UI =====================
+
+-- 主開關
+Tabs.AttackTab:Toggle({
+    Title = "快速攻擊開關",
+    Value = true,
+    Callback = function(state)
+        AttackConfig.Enabled = state
+        if state then
+            startAttackLoop()
+            WindUI:Notify({ 
+                Title = "快速攻擊", 
+                Content = "已開啟", 
+                Duration = 2 
+            })
+        else
+            if attackConnection then
+                attackConnection:Disconnect()
+                attackConnection = nil
+            end
+            WindUI:Notify({ 
+                Title = "快速攻擊", 
+                Content = "已關閉", 
+                Duration = 2 
+            })
+        end
+    end
+})
+
+Tabs.AttackTab:Divider()
+
+-- 攻擊距離滑桿
+Tabs.AttackTab:Slider({
+    Title = "攻擊範圍",
+    Value = { Min = 50, Max = 10000, Default = 5000 },
+    Callback = function(value)
+        AttackConfig.AttackDistance = value
+        WindUI:Notify({ 
+            Title = "攻擊範圍", 
+            Content = "已設置為: " .. value, 
+            Duration = 2 
+        })
+    end
+})
+
+-- 攻擊速度輸入框
+Tabs.AttackTab:Input({
+    Title = "攻擊速度（秒）",
+    Value = "0.3",
+    Placeholder = "輸入攻擊間隔 (例: 0.1)",
+    Callback = function(value)
+        local speed = tonumber(value)
+        if speed and speed >= 0.03 and speed <= 2 then
+            AttackConfig.AttackDelay = speed
+            WindUI:Notify({ 
+                Title = "攻擊速度", 
+                Content = string.format("已設置為: %.3f秒 (約%d次/秒)", speed, math.floor(1/speed)), 
+                Duration = 3 
+            })
+            
+            -- 重新啟動攻擊循環以應用新速度
+            if AttackConfig.Enabled then
+                startAttackLoop()
+            end
+        else
+            WindUI:Notify({ 
+                Title = "錯誤", 
+                Content = "請輸入 0.03 到 2 之間的數字", 
+                Duration = 3 
+            })
+        end
+    end
+})
+
+Tabs.AttackTab:Divider()
+
+-- 攻擊目標選擇
+Tabs.AttackTab:Toggle({
+    Title = "攻擊NPC/怪物",
+    Value = true,
+    Callback = function(state)
+        AttackConfig.AttackMobs = state
+        WindUI:Notify({ 
+            Title = "攻擊NPC", 
+            Content = state and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+Tabs.AttackTab:Toggle({
+    Title = "攻擊玩家",
+    Value = true,
+    Callback = function(state)
+        AttackConfig.AttackPlayers = state
+        WindUI:Notify({ 
+            Title = "攻擊玩家", 
+            Content = state and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+Tabs.AttackTab:Divider()
+
+-- 自動武裝色
+local AutoHakiEnabled = false
+local autoHakiTask = nil
+
+local function startAutoHakiLoop()
+    if autoHakiTask then
+        task.cancel(autoHakiTask)
+        autoHakiTask = nil
+    end
+    autoHakiTask = task.spawn(function()
+        while AutoHakiEnabled do
+            task.wait(0.2)
+            if AutoHakiEnabled and LocalPlayer.Character and not LocalPlayer.Character:FindFirstChild("HasBuso") then
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
+                end)
+            end
+        end
+        autoHakiTask = nil
+    end)
+end
+
+Tabs.AttackTab:Toggle({
+    Title = "自動武裝色",
+    Value = false,
+    Callback = function(state)
+        AutoHakiEnabled = state
+        if state then
+            startAutoHakiLoop()
+            WindUI:Notify({ Title = "自動武裝色", Content = "已開啟", Duration = 2 })
+        else
+            if autoHakiTask then
+                task.cancel(autoHakiTask)
+                autoHakiTask = nil
+            end
+            WindUI:Notify({ Title = "自動武裝色", Content = "已關閉", Duration = 2 })
+        end
+    end
+})
+
+-- 自動V4
+local autoV4Task = nil
+local function callAwakeningRemote()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
+    local Backpack = LocalPlayer:FindFirstChild("Backpack")
+    if not Backpack then return end
+    local Awakening = Backpack:FindFirstChild("Awakening")
+    if not Awakening then return end
+    local RemoteFunc = Awakening:FindFirstChild("RemoteFunction")
+    if not RemoteFunc then return end
+    pcall(function()
+        RemoteFunc:InvokeServer(true)
+    end)
+end
+
+Tabs.AttackTab:Toggle({
+    Title = "自動V4",
+    Value = false,
+    Callback = function(state)
+        _G.ToggleStates["自動V4"] = state
+        if autoV4Task then
+            task.cancel(autoV4Task)
+            autoV4Task = nil
+        end
+        if state then
+            autoV4Task = task.spawn(function()
+                while _G.ToggleStates["自動V4"] do
+                    callAwakeningRemote()
+                    task.wait(1)
+                end
+                autoV4Task = nil
+            end)
+            WindUI:Notify({ Title = "自動V4", Content = "已開啟", Duration = 2 })
+        else
+            WindUI:Notify({ Title = "自動V4", Content = "已關閉", Duration = 2 })
+        end
+    end
+})
+
+-- 自動V3
+local autoV3Task = nil
+local function callRaceV3Remote()
+    local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    if not Remotes then return end
+    local CommE = Remotes:FindFirstChild("CommE")
+    if not CommE then return end
+    pcall(function()
+        CommE:FireServer("ActivateAbility")
+    end)
+end
+
+Tabs.AttackTab:Toggle({
+    Title = "自動V3",
+    Value = false,
+    Callback = function(state)
+        _G.ToggleStates["自動V3"] = state
+        if autoV3Task then
+            task.cancel(autoV3Task)
+            autoV3Task = nil
+        end
+        if state then
+            autoV3Task = task.spawn(function()
+                while _G.ToggleStates["自動V3"] do
+                    callRaceV3Remote()
+                    task.wait(1)
+                end
+                autoV3Task = nil
+            end)
+            WindUI:Notify({ Title = "自動V3", Content = "已開啟", Duration = 2 })
+        else
+            WindUI:Notify({ Title = "自動V3", Content = "已關閉", Duration = 2 })
+        end
+    end
+})
+
+-- ===================== ESP透視標籤頁 - 完整版 =====================
+-- 原來的ESP Pro系統（完全保持原樣）
+local espEnabled = false
+local espObjects = {}
+local RandomID = math.random(1, 1000000)
+
+local function Round(num)
+    return math.floor(tonumber(num) + 0.5)
+end
+
+local function getTeamColor(player)
+    if player.Team ~= LocalPlayer.Team then
+        return Color3.fromRGB(255, 0, 0)
+    else
+        return Color3.fromRGB(0, 0, 255)
+    end
+end
+
+local function removeESP(player)
+    if espObjects[player] then
+        for _, v in pairs(espObjects[player]) do
+            if typeof(v) == "Instance" and v.Parent then
+                v:Destroy()
+            end
+        end
+        espObjects[player] = nil
+    end
+end
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+    if not player.Character then return end
+    
+    removeESP(player)
+    
+    local head = player.Character:FindFirstChild("Head")
+    if not head then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = player.Character
+    highlight.FillTransparency = 0.7
+    highlight.OutlineColor = getTeamColor(player)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = player.Character
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "NameESP_" .. RandomID
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.AlwaysOnTop = true
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.Parent = head
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 45, 0, 45)
+    avatar.Position = UDim2.new(0, 0, 0, 0)
+    avatar.BackgroundTransparency = 1
+    avatar.BorderSizePixel = 0
+    avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=150&height=150&format=png"
+    avatar.Parent = billboard
+
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, -50, 1, 0)
+    text.Position = UDim2.new(0, 50, 0, 0)
+    text.BackgroundTransparency = 1
+    text.TextStrokeTransparency = 0.5
+    text.TextScaled = true
+    text.Font = Enum.Font.Code
+    text.TextYAlignment = Enum.TextYAlignment.Top
+    text.TextXAlignment = Enum.TextXAlignment.Left
+    text.TextColor3 = getTeamColor(player)
+    text.Parent = billboard
+
+    espObjects[player] = { highlight = highlight, billboard = billboard, text = text, avatar = avatar }
+
+    task.spawn(function()
+        while espEnabled and player and player.Parent and espObjects[player] do
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local root = player.Character.HumanoidRootPart
+                local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if root and localRoot then
+                    local distance = Round((root.Position - localRoot.Position).Magnitude)
+                    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                    local healthPercent = humanoid and Round((humanoid.Health / humanoid.MaxHealth) * 100) or 0
+                    if espObjects[player] and espObjects[player].text then
+                        espObjects[player].text.Text = string.format("%s | %d M\nHealth: %d%%", player.Name, distance, healthPercent)
+                    end
+                end
+            else
+                break
+            end
+            task.wait(0.2)
+        end
+    end)
+end
+
+local function setupPlayerConnections(player)
+    player.CharacterAdded:Connect(function(character)
+        if espEnabled then
+            task.wait(0.5)
+            createESP(player)
+        end
+    end)
+    player.CharacterRemoving:Connect(function()
+        removeESP(player)
+    end)
+end
+
+local function enableESPPro()
+    espEnabled = true
+    for _, p in pairs(Players:GetPlayers()) do
+        setupPlayerConnections(p)
+        if p.Character then
+            task.wait(0.1)
+            createESP(p)
+        end
+    end
+    WindUI:Notify({ Title = "ESP Pro", Content = "已啟用ESP", Duration = 2 })
+end
+
+local function disableESPPro()
+    espEnabled = false
+    for player, _ in pairs(espObjects) do
+        removeESP(player)
+    end
+    espObjects = {}
+    WindUI:Notify({ Title = "ESP Pro", Content = "已禁用ESP", Duration = 2 })
+end
+
+-- ===================== 新加的ESP系統（合併版）=====================
+local ESPConfig = {
+    MainSwitch = false,     
+    ShowPlayerInfo = false,  -- 合併：顯示玩家名稱+距離+血量
+    ShowTracer = false       
+}
+
+local ESPElements = {}
+
+local function CleanupPlayerESP(player)
+    if not ESPElements[player.UserId] then return end
+    
+    if ESPElements[player.UserId].PlayerInfoESP then
+        ESPElements[player.UserId].PlayerInfoESP:Destroy()
+        ESPElements[player.UserId].PlayerInfoESP = nil
+    end
+    if ESPElements[player.UserId].PlayerInfoUpdateConn then
+        ESPElements[player.UserId].PlayerInfoUpdateConn:Disconnect()
+        ESPElements[player.UserId].PlayerInfoUpdateConn = nil
+    end
+    
+    if ESPElements[player.UserId].Tracer then
+        ESPElements[player.UserId].Tracer:Remove()
+        ESPElements[player.UserId].Tracer = nil
+    end
+    if ESPElements[player.UserId].TracerConn then
+        ESPElements[player.UserId].TracerConn:Disconnect()
+        ESPElements[player.UserId].TracerConn = nil
+    end
+end
+
+local function CreatePlayerInfoESP(player)
+    if not player.Character or not player.Character:FindFirstChild("Head") then return end
+    local head = player.Character.Head
+    
+    if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoESP then
+        ESPElements[player.UserId].PlayerInfoESP:Destroy()
+    end
+    
+    -- 創建信息顯示面板
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "PlayerInfoESP"
+    billboardGui.Adornee = head
+    billboardGui.Size = UDim2.new(0, 150, 0, 60)
+    billboardGui.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Parent = head
+    
+    -- 玩家名稱標籤
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Parent = billboardGui
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, 0, 0.25, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.TextColor3 = Color3.new(1, 1, 1)
+    nameLabel.TextScaled = true 
+    nameLabel.Font = Enum.Font.GothamSemibold
+    nameLabel.Text = player.Name
+    
+    -- 距離標籤
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Name = "DistanceLabel"
+    distanceLabel.Parent = billboardGui
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Size = UDim2.new(1, 0, 0.25, 0)
+    distanceLabel.Position = UDim2.new(0, 0, 0.25, 0)
+    distanceLabel.TextColor3 = Color3.new(1, 0.5, 0)
+    distanceLabel.TextScaled = true
+    distanceLabel.Font = Enum.Font.Gotham
+    
+    -- 血量標籤
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Name = "HealthLabel"
+    healthLabel.Parent = billboardGui
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    healthLabel.TextColor3 = Color3.new(0, 1, 0)
+    healthLabel.TextScaled = true 
+    healthLabel.Font = Enum.Font.Gotham
+    
+    -- 更新連接
+    local updateConnection = RunService.RenderStepped:Connect(function()
+        if not billboardGui.Parent or not LocalPlayer.Character or not player.Character then 
+            return 
+        end
+        
+        -- 更新距離信息
+        local localRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+        if localRoot and targetRoot then
+            local distance = (localRoot.Position - targetRoot.Position).Magnitude
+            distanceLabel.Text = string.format("距離: %.1f米", distance)   
+        end
+        
+        -- 更新血量信息
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local health = math.floor(humanoid.Health)
+            local maxHealth = math.floor(humanoid.MaxHealth)
+            
+            local healthPercent = health / maxHealth
+            if healthPercent > 0.7 then
+                healthLabel.TextColor3 = Color3.new(0, 1, 0)
+            elseif healthPercent > 0.3 then
+                healthLabel.TextColor3 = Color3.new(1, 1, 0)
+            else
+                healthLabel.TextColor3 = Color3.new(1, 0, 0)
+            end
+            
+            healthLabel.Text = string.format("血量: %d/%d (%.0f%%)", health, maxHealth, healthPercent * 100)
+        else
+            healthLabel.Text = "血量: N/A"
+        end
+    end)
+    
+    ESPElements[player.UserId] = ESPElements[player.UserId] or {}
+    ESPElements[player.UserId].PlayerInfoESP = billboardGui
+    ESPElements[player.UserId].PlayerInfoUpdateConn = updateConnection
+end
+
+local function CreateTracerESP(player)
+    if ESPElements[player.UserId] and ESPElements[player.UserId].Tracer then
+        ESPElements[player.UserId].Tracer:Remove()
+    end
+    
+    local tracer = Drawing.new("Line")
+    tracer.Color = Color3.new(1, 0, 0)
+    tracer.Thickness = 2
+    tracer.Transparency = 0.8
+    tracer.Visible = false
+    
+    local renderConnection = RunService.RenderStepped:Connect(function()
+        if not ESPConfig.MainSwitch or not ESPConfig.ShowTracer then
+            tracer.Visible = false
+            return
+        end
+        
+        local localChar = LocalPlayer.Character
+        local targetChar = player.Character
+        if not localChar or not targetChar then
+            tracer.Visible = false
+            return
+        end
+        
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        if targetRoot then
+            local screenPos, isVisible = Camera:WorldToViewportPoint(targetRoot.Position)
+            if isVisible then
+                tracer.Visible = true
+                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+            else
+                tracer.Visible = false
+            end
+        else
+            tracer.Visible = false
+        end
+    end)
+    
+    ESPElements[player.UserId] = ESPElements[player.UserId] or {}
+    ESPElements[player.UserId].Tracer = tracer
+    ESPElements[player.UserId].TracerConn = renderConnection
+end
+
+local function UpdatePlayerESP(player)
+    if player == LocalPlayer then return end
+    
+    if not player.Character then
+        CleanupPlayerESP(player)
+        return
+    end
+    
+    if not player.Character:FindFirstChild("Head") or not player.Character:FindFirstChild("HumanoidRootPart") then
+        CleanupPlayerESP(player)
+        return
+    end
+    
+    if ESPConfig.MainSwitch then
+        -- 創建射線追踪
+        CreateTracerESP(player)
+        
+        -- 創建玩家信息（合併名稱+距離+血量）
+        if ESPConfig.ShowPlayerInfo then
+            CreatePlayerInfoESP(player)
+        else
+            if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoESP then
+                ESPElements[player.UserId].PlayerInfoESP:Destroy()
+                ESPElements[player.UserId].PlayerInfoESP = nil
+            end
+            if ESPElements[player.UserId] and ESPElements[player.UserId].PlayerInfoUpdateConn then
+                ESPElements[player.UserId].PlayerInfoUpdateConn:Disconnect()
+                ESPElements[player.UserId].PlayerInfoUpdateConn = nil
+            end
+        end
+    else
+        CleanupPlayerESP(player)
+    end
+end
+
+local function UpdateAllESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            UpdatePlayerESP(player)
+        end
+    end
+end
+
+local function HandlePlayerRespawn(player)
+    local character = player.Character
+    if not character then
+        character = player.CharacterAdded:Wait()
+    end
+    
+    local head = character:WaitForChild("Head", 5)
+    local rootPart = character:WaitForChild("HumanoidRootPart", 5)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    
+    if head and rootPart and humanoid then
+        task.wait(0.5)
+        UpdatePlayerESP(player)
+        task.wait(1)
+        UpdatePlayerESP(player)
+    end
+end
+
+-- 初始化ESP系統
+task.spawn(function()
+    -- 处理新玩家加入
+    Players.PlayerAdded:Connect(function(player)
+        if player == LocalPlayer then return end
+        
+        if player.Character then
+            task.spawn(HandlePlayerRespawn, player)
+        end
+        
+        player.CharacterAdded:Connect(function()
+            task.spawn(HandlePlayerRespawn, player)
+        end)
+        
+        player.CharacterRemoving:Connect(function()
+            CleanupPlayerESP(player)
+        end)
+    end)
+    
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(1) 
+        UpdateAllESP()
+    end)
+    
+    while true do
+        task.wait(3) 
+        if ESPConfig.MainSwitch then
+            UpdateAllESP()
+        end
+    end
+end)
+
+-- ===================== UI控制部分 =====================
+-- ESP Pro（原有功能）
+Tabs.ESPTab:Toggle({
+    Title = "ESP Pro",
+    Value = false,
+    Callback = function(state)
+        if state then
+            enableESPPro()
+        else
+            disableESPPro()
+        end
+    end
+})
+
+Tabs.ESPTab:Divider()
+
+-- 新ESP系統控制
+Tabs.ESPTab:Toggle({
+    Title = "進階ESP總開關",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.MainSwitch = enabled
+        if enabled then
+            WindUI:Notify({ 
+                Title = "進階ESP", 
+                Content = "已開啟", 
+                Duration = 2 
+            })
+        else
+            WindUI:Notify({ 
+                Title = "進階ESP", 
+                Content = "已關閉", 
+                Duration = 2 
+            })
+        end
+        UpdateAllESP()
+    end
+})
+
+Tabs.ESPTab:Toggle({
+    Title = "顯示玩家信息",
+    Desc = "包含：名稱、距離、血量",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.ShowPlayerInfo = enabled
+        UpdateAllESP()
+        WindUI:Notify({ 
+            Title = "玩家信息", 
+            Content = enabled and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+Tabs.ESPTab:Toggle({
+    Title = "射线追踪（屏幕中心）",
+    Value = false,
+    Callback = function(enabled)
+        ESPConfig.ShowTracer = enabled
+        UpdateAllESP()
+        WindUI:Notify({ 
+            Title = "射线追踪", 
+            Content = enabled and "已開啟" or "已關閉", 
+            Duration = 2 
+        })
+    end
+})
+
+-- 為現有玩家設置連接（原有功能保持不變）
+for _, p in pairs(Players:GetPlayers()) do
+    setupPlayerConnections(p)
+end
+
+-- ===================== 傳送標籤頁 =====================
+Tabs.TeleportTab:Button({
+    Title = "傳送至一海",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelMain")
+            WindUI:Notify({ Title = "傳送", Content = "正在傳送至一海", Duration = 2 })
+        end)
+    end
+})
+
+Tabs.TeleportTab:Button({
+    Title = "傳送至二海",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelDressrosa")
+            WindUI:Notify({ Title = "傳送", Content = "正在傳送至二海", Duration = 2 })
+        end)
+    end
+})
+
+Tabs.TeleportTab:Button({
+    Title = "傳送至三海",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelZou")
+            WindUI:Notify({ Title = "傳送", Content = "正在傳送至三海", Duration = 2 })
+        end)
+    end
+})
+
+Tabs.TeleportTab:Divider()
+
+-- 二海傳送點
+local sea2Locations = {
+    ["天鵝的房間"] = CFrame.new(-287.37, 305.81, 592.98),
+    ["豪宅"] = CFrame.new(2286.93, 15.06, 910.51),
+    ["鬼船裡"] = CFrame.new(-6501.06, 83.11, -123.52),
+    ["鬼船外"] = CFrame.new(922.78, 123.96, 32842.40)
+}
+
+for name, cf in pairs(sea2Locations) do
+    Tabs.TeleportTab:Button({
+        Title = "傳送至" .. name,
+        Callback = function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = cf
+                WindUI:Notify({ Title = "傳送", Content = "已傳送至" .. name, Duration = 2 })
+            end
+        end
+    })
+end
+
+Tabs.TeleportTab:Divider()
+
+-- 三海傳送點
+local sea3Locations = {
+    ["海洋城堡"] = CFrame.new(-12463.60, 376.26, -7566.08),
+    ["海龜豪宅"] = CFrame.new(-5060.41, 316.43, -3192.30),
+    ["司法"] = CFrame.new(-5096.48, 316.43, -3177.91),
+    ["九頭蛇"] = CFrame.new(-5027.03, 316.43, -3206.07)
+}
+
+for name, cf in pairs(sea3Locations) do
+    Tabs.TeleportTab:Button({
+        Title = "傳送至" .. name,
+        Callback = function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = cf
+                WindUI:Notify({ Title = "傳送", Content = "已傳送至" .. name, Duration = 2 })
+            end
+        end
+    })
+end
+
+-- ===================== 功能2標籤頁 =====================
+-- 自動變身大佛＋拿刀功能（完全原樣）
+local AUTO_BUDDHA_ENABLED = false
+local CHECK_INTERVAL = 5
+local BUDDHA_SLOT = 2
+local SWORD_SLOT = 3
+local BUDDHA_MIN_SIZE = 20.0
+
+local ALL_SWORDS = {
+    "True Triple Katana", "Hallow Scythe", "Dark Blade", "Cursed Dual Katana",
+    "Rengoku", "Saber", "Saishi", "Shark Anchor", "Spikey Trident",
+    "Tushita", "Yama", "Dragonheart"
+}
+
+local SWORDS_TABLE = {}
+for _, sword in ipairs(ALL_SWORDS) do
+    SWORDS_TABLE[sword] = true
+end
+
+local function isBuddhaForm()
+    local character = LocalPlayer.Character
+    if not character then return false end
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return false end
+    local sizeMagnitude = humanoidRootPart.Size.Magnitude
+    return sizeMagnitude > BUDDHA_MIN_SIZE
+end
+
+local function pressNumberKey(number)
+    local virtualInput = game:GetService("VirtualInputManager")
+    local keyCode
+    if number == 1 then keyCode = Enum.KeyCode.One
+    elseif number == 2 then keyCode = Enum.KeyCode.Two
+    elseif number == 3 then keyCode = Enum.KeyCode.Three
+    elseif number == 4 then keyCode = Enum.KeyCode.Four
+    elseif number == 5 then keyCode = Enum.KeyCode.Five
+    elseif number == 6 then keyCode = Enum.KeyCode.Six
+    elseif number == 7 then keyCode = Enum.KeyCode.Seven
+    elseif number == 8 then keyCode = Enum.KeyCode.Eight
+    else keyCode = Enum.KeyCode.Nine end
+    virtualInput:SendKeyEvent(true, keyCode, false, nil)
+    task.wait(0.05)
+    virtualInput:SendKeyEvent(false, keyCode, false, nil)
+end
+
+local function pressZKey()
+    local virtualInput = game:GetService("VirtualInputManager")
+    virtualInput:SendKeyEvent(true, Enum.KeyCode.Z, false, nil)
+    task.wait(0.1)
+    virtualInput:SendKeyEvent(false, Enum.KeyCode.Z, false, nil)
+end
+
+local function hasAnySwordEquipped()
+    local character = LocalPlayer.Character
+    if not character then return false, nil end
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Tool") and SWORDS_TABLE[child.Name] then
+            return true, child.Name
+        end
+    end
+    return false, nil
+end
+
+local function equipSword()
+    pressNumberKey(SWORD_SLOT)
+    task.wait(0.3)
+    local hasSword, swordName = hasAnySwordEquipped()
+    if hasSword then
+        return true, swordName
+    end
+    task.wait(0.5)
+    return hasAnySwordEquipped()
+end
+
+local function performBuddhaTransformation()
+    local character = LocalPlayer.Character
+    if not character then return false end
+    pressNumberKey(BUDDHA_SLOT)
+    task.wait(0.5)
+    pressZKey()
+    local waitTime = 0
+    local maxWaitTime = 3
+    while waitTime < maxWaitTime do
+        task.wait(0.1)
+        waitTime = waitTime + 0.1
+        if isBuddhaForm() then
+            return true
+        end
+    end
+    return false
+end
+
+local buddhaTask = nil
+local function startBuddhaLoop()
+    if buddhaTask then
+        task.cancel(buddhaTask)
+        buddhaTask = nil
+    end
+    buddhaTask = task.spawn(function()
+        local lastCheckTime = 0
+        while AUTO_BUDDHA_ENABLED do
+            task.wait(1)
+            local currentTime = tick()
+            if currentTime - lastCheckTime >= CHECK_INTERVAL then
+                lastCheckTime = currentTime
+                if not LocalPlayer.Character then
+                    -- 等待角色
+                else
+                    if isBuddhaForm() then
+                        local hasSword, swordName = hasAnySwordEquipped()
+                        if not hasSword then
+                            equipSword()
+                        end
+                    else
+                        local success = performBuddhaTransformation()
+                        if success then
+                            task.wait(0.5)
+                            local hasSword, swordName = hasAnySwordEquipped()
+                            if not hasSword then
+                                equipSword()
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        buddhaTask = nil
+    end)
+end
+
+Tabs.ActivityTab:Toggle({
+    Title = "自動變身大佛＋拿刀",
+    Value = false,
+    Callback = function(state)
+        AUTO_BUDDHA_ENABLED = state
+        if state then
+            startBuddhaLoop()
+            WindUI:Notify({ Title = "自動變佛＋拿刀", Content = "功能已開啟", Duration = 2 })
+        else
+            if buddhaTask then
+                task.cancel(buddhaTask)
+                buddhaTask = nil
+            end
+            WindUI:Notify({ Title = "自動變佛＋拿刀", Content = "功能已關閉", Duration = 2 })
+        end
+    end
+})
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if AUTO_BUDDHA_ENABLED then
+        task.wait(2)
+        startBuddhaLoop()
+    end
+end)
+
+Tabs.ActivityTab:Divider()
+
+Tabs.ActivityTab:Button({
+    Title = "pvp",
+    Callback = function()
+        WindUI:Notify({ Title = "Aim Skill", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E6%9C%89%E7%94%A8%E8%87%AA%E8%8B%97"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "pvp(電腦)",
+    Callback = function()
+        WindUI:Notify({ Title = "PVP", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://xenopvp.vercel.app/api/FastAttack_PVP"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "老外tp",
+    Callback = function()
+        WindUI:Notify({ Title = "老外tp", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E8%80%81%E5%A4%96tp"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "循環傳送",
+    Callback = function()
+        WindUI:Notify({ Title = "循環傳送", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E5%BE%AA%E7%92%B0%E5%82%B3%E9%80%81"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "追蹤",
+    Callback = function()
+        WindUI:Notify({ Title = "追蹤", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E8%BF%BD%E8%B9%A4"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "秒殺(海)",
+    Callback = function()
+        WindUI:Notify({ Title = "New Attack", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/%E7%A7%92%E6%AE%BA%E6%B5%B7"))()
+        end)
+    end
+})
+
+Tabs.ActivityTab:Button({
+    Title = "秒殺",
+    Callback = function()
+        WindUI:Notify({ Title = "秒殺", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/aimbot"))()
+        end)
+    end
+})
+
+-- 特效顏色更換 
+Tabs.texiaoTab:Paragraph({
+    Title = "特效更換",
+    Desc = "只有你自己能看到",
+    Image = "info",
+    Color = "Red"
+})
+
+Tabs.texiaoTab:Button({
+    Title = "白色",
+    Callback = function()
+        WindUI:Notify({ Title = "白色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/bai"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "藍色",
+    Callback = function()
+        WindUI:Notify({ Title = "藍色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E8%93%9D"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "紅色",
+    Callback = function()
+        WindUI:Notify({ Title = "紅色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%BA%A2"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "綠色",
+    Callback = function()
+        WindUI:Notify({ Title = "綠色", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%BB%BF%E8%89%B2"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "七彩炫光",
+    Callback = function()
+        WindUI:Notify({ Title = "七彩炫光", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E4%B8%83%E5%BD%A9%E7%82%AB%E5%85%89"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "地獄火",
+    Callback = function()
+        WindUI:Notify({ Title = "地獄火", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E5%9C%B0%E7%8B%B1%E7%81%AB"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "未來科技（稍微卡頓）",
+    Callback = function()
+        WindUI:Notify({ Title = "地獄火", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E6%9C%AA%E6%9D%A5%E7%A7%91%E6%8A%80"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "生化危機",
+    Callback = function()
+        WindUI:Notify({ Title = "生化危機", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%94%9F%E5%8C%96%E5%8D%B1%E6%9C%BA"))()
+        end)
+    end
+})
+
+Tabs.texiaoTab:Button({
+    Title = "電磁脈衝",
+    Callback = function()
+        WindUI:Notify({ Title = "生化危機", Content = "正在加載腳本...", Duration = 3 })
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ttker951-dot/col/refs/heads/main/%E7%94%B5%E7%A3%81%E8%84%89%E5%86%B2"))()
+        end)
+    end
+})
+
+-- ===================== 主題顏色標籤頁 =====================
+-- 獲取當前可用主題
+local currentThemeName = WindUI:GetCurrentTheme()
+local availableThemes = WindUI:GetThemes()
+
+-- 創建主題列表
+local themeList = {}
+for themeName, _ in pairs(availableThemes) do
+    table.insert(themeList, themeName)
+end
+
+-- 主題選擇器
+Tabs.ThemeTab:Dropdown({
+    Title = "選擇主題",
+    Values = themeList,
+    Value = currentThemeName,
+    Callback = function(selectedTheme)
+        WindUI:SetTheme(selectedTheme)
+        WindUI:Notify({
+            Title = "主題切換",
+            Content = "已切換到 " .. selectedTheme .. " 主題",
+            Icon = "palette",
+            Duration = 3
+        })
+    end
+})
+
+-- ===================== 腳本完成 =====================
+task.wait(1)
+-- 基本通知
+WindUI:Notify({
+    Title = "小傑腳本",
+    Content = "加載完成",
+    Duration = 5,
+})
+
+Window:OnClose(function()
+    WindUI:Notify({
+        Title = "小傑腳本中心",
+        Content = "界面已關閉\n按 N 重新打開",
+        Duration = 3,
+    })
+end)
+
+-- 修復後的命令系統
+local function updateChatCommands()
+    game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
+        msg = msg:lower()
+        
+        if msg == "/esp on" then
+            enableESPPro()
+        elseif msg == "/esp off" then
+            disableESPPro()
+        elseif msg == "/attack on" then
+            AttackConfig.Enabled = true
+            startAttackLoop()
+            WindUI:Notify({ Title = "快速攻擊", Content = "已開啟", Duration = 2 })
+        elseif msg == "/attack off" then
+            AttackConfig.Enabled = false
+            if attackConnection then
+                attackConnection:Disconnect()
+                attackConnection = nil
+            end
+            WindUI:Notify({ Title = "快速攻擊", Content = "已關閉", Duration = 2 })
+        elseif msg == "/attack status" then
+            print("快速攻擊系統狀態:")
+            print("啟用: " .. (AttackConfig.Enabled and "是" or "否"))
+            print("攻擊範圍: " .. AttackConfig.AttackDistance)
+            print("攻擊速度: " .. AttackConfig.AttackDelay .. "秒")
+            print("攻擊怪物: " .. (AttackConfig.AttackMobs and "是" or "否"))
+            print("攻擊玩家: " .. (AttackConfig.AttackPlayers and "是" or "否"))
+        end
+    end)
+end
+
+updateChatCommands()
+
+-- 創建一個簡單的控制命令
+local function createCommands()
+    print("\n可用命令:")
+    print("/attack on - 開啟快速攻擊")
+    print("/attack off - 關閉快速攻擊")
+    print("/attack status - 查看狀態")
+    print("/esp on - 開啟ESP")
+    print("/esp off - 關閉ESP")
+    print("========================================")
+    
+    game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
+        msg = msg:lower()
+        
+        if msg == "/attack help" then
+            print("快速攻擊系統指令:")
+            print("/attack on - 開啟攻擊")
+            print("/attack off - 關閉攻擊")
+            print("/attack status - 查看狀態")
+        end
+    end)
+end
+
+createCommands()
+
+print("小傑腳本已完全加載完成！")
+print("新快速攻擊系統已整合完成！")
+print("攻擊速度使用輸入方式設置！")
