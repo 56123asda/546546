@@ -877,6 +877,44 @@ function p.GenerateUniqueID(v)
 return h:GenerateGUID(false)
 end
 
+-- ========== 通用刷新函数 ==========
+function p.RefreshScrollingFrame(frame)
+    if not frame or not frame:IsA("ScrollingFrame") then return end
+    
+    local layout = frame:FindFirstChildOfClass("UIListLayout")
+    if not layout then return end
+    
+    -- 计算内容高度
+    local contentHeight = layout.AbsoluteContentSize.Y
+    
+    -- 添加内边距
+    local padding = frame:FindFirstChildOfClass("UIPadding")
+    if padding then
+        contentHeight = contentHeight + 
+            padding.PaddingTop.Offset + 
+            padding.PaddingBottom.Offset
+    end
+    
+    -- 更新 CanvasSize
+    frame.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
+    
+    return contentHeight
+end
+
+-- 递归刷新所有子元素
+function p.RefreshAllContainers(parent)
+    for _, child in ipairs(parent:GetChildren()) do
+        if child:IsA("ScrollingFrame") then
+            p.RefreshScrollingFrame(child)
+        end
+        
+        -- 递归检查子元素
+        if #child:GetChildren() > 0 then
+            p.RefreshAllContainers(child)
+        end
+    end
+end
+
 return p end function a.c()
 
 local b={}
@@ -1480,6 +1518,8 @@ end
 
 
 return ab end function a.f()
+
+
 
 
 
@@ -6705,6 +6745,98 @@ MaxSize=Vector2.new(300,400),
 })
 })
 
+-- ========== 增强的刷新函数 ==========
+function ar:Refresh(values)
+    -- 保存当前值
+    local currentValues = values or self.Values
+    
+    -- 清除现有内容
+    for _, child in ipairs(self.UIElements.Menu.Frame.ScrollingFrame:GetChildren()) do
+        if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+            child:Destroy()
+        end
+    end
+    
+    -- 重新创建选项
+    self.Tabs = {}
+    for index, value in ipairs(currentValues) do
+        self:CreateOption(value, index)
+    end
+    
+    -- 强制重新计算菜单大小
+    task.spawn(function()
+        task.wait() -- 等待一帧让 UI 更新
+        
+        -- 重新计算列表大小
+        self:RecalculateListSize()
+        
+        -- 更新 CanvasSize
+        local scrollingFrame = self.UIElements.Menu.Frame.ScrollingFrame
+        local layout = scrollingFrame:FindFirstChildOfClass("UIListLayout")
+        if layout then
+            scrollingFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y)
+        end
+        
+        -- 如果搜索框存在，触发搜索更新
+        if self.SearchBarEnabled and self.SearchBar then
+            self:FilterOptions(self.SearchBar.Text)
+        end
+    end)
+end
+
+-- 添加选项过滤功能（用于搜索）
+function ar:FilterOptions(searchText)
+    searchText = searchText:lower()
+    
+    for _, tab in pairs(self.Tabs) do
+        if tab and tab.UIElements and tab.UIElements.TabItem then
+            local visible = searchText == "" or 
+                tab.Name:lower():find(searchText, 1, true) or
+                (tab.Desc and tab.Desc:lower():find(searchText, 1, true))
+            
+            tab.UIElements.TabItem.Visible = visible
+        end
+    end
+    
+    -- 重新计算列表大小
+    self:RecalculateListSize()
+end
+
+-- 增强的列表大小计算
+function ar:RecalculateListSize()
+    local scrollingFrame = self.UIElements.Menu.Frame.ScrollingFrame
+    local layout = scrollingFrame:FindFirstChildOfClass("UIListLayout")
+    
+    if not layout then return end
+    
+    -- 计算可见内容的高度
+    local visibleHeight = 0
+    for _, child in ipairs(scrollingFrame:GetChildren()) do
+        if child.Visible and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+            visibleHeight = visibleHeight + child.AbsoluteSize.Y
+        end
+    end
+    
+    -- 添加内边距
+    local padding = scrollingFrame:FindFirstChildOfClass("UIPadding")
+    if padding then
+        visibleHeight = visibleHeight + 
+            padding.PaddingTop.Offset + 
+            padding.PaddingBottom.Offset
+    end
+    
+    -- 更新 CanvasSize
+    scrollingFrame.CanvasSize = UDim2.fromOffset(0, visibleHeight)
+    
+    -- 更新菜单容器大小
+    local menuCanvas = self.UIElements.MenuCanvas
+    if menuCanvas then
+        local maxHeight = 400 -- 从原始代码中获取
+        local newHeight = math.min(visibleHeight + 40, maxHeight) -- 添加额外空间
+        menuCanvas.Size = UDim2.fromOffset(menuCanvas.AbsoluteSize.X, newHeight)
+    end
+end
+
 local function RecalculateCanvasSize()
 an.UIElements.Menu.Frame.ScrollingFrame.CanvasSize=UDim2.fromOffset(0,an.UIElements.UIListLayout.AbsoluteContentSize.Y)
 end
@@ -6845,294 +6977,238 @@ end
 end
 end
 
-function ar.Refresh(at,au)
-for av,aw in next,an.UIElements.Menu.Frame.ScrollingFrame:GetChildren()do
-if not aw:IsA"UIListLayout"then
-aw:Destroy()
-end
-end
-
-an.Tabs={}
-
-if an.SearchBarEnabled then
-if not as then
-as=ai("Search...","search",an.UIElements.Menu,nil,function(ax)
-for ay,az in next,an.Tabs do
-if string.find(string.lower(az.Name),string.lower(ax),1,true)then
-az.UIElements.TabItem.Visible=true
-else
-az.UIElements.TabItem.Visible=false
-end
-RecalculateListSize()
-RecalculateCanvasSize()
-end
-end,true)
-as.Size=UDim2.new(1,0,0,ao.SearchBarHeight)
-as.Position=UDim2.new(0,0,0,0)
-as.Name="SearchBar"
-end
-end
-
-for ax,ay in next,au do
-if(ay.Type~="Divider")then
-local az={
-Name=typeof(ay)=="table"and ay.Title or ay,
-Desc=typeof(ay)=="table"and ay.Desc or nil,
-Icon=typeof(ay)=="table"and ay.Icon or nil,
-IconSize=typeof(ay)=="table"and ay.IconSize or nil,
-Original=ay,
-Selected=false,
-Locked=typeof(ay)=="table"and ay.Locked or false,
-UIElements={},
-}
-local aA
-if az.Icon then
-aA=aj.Image(
-az.Icon,
-az.Icon,
-0,
-am.Window.Folder,
-"Dropdown",
-true
-)
-aA.Size=UDim2.new(0,az.IconSize or ao.TabIcon,0,az.IconSize or ao.TabIcon)
-aA.ImageLabel.ImageTransparency=aq=="Dropdown"and.2 or 0
-az.UIElements.TabIcon=aA
-end
-az.UIElements.TabItem=aj.NewRoundFrame(ao.MenuCorner-ao.MenuPadding,"Squircle",{
-Size=UDim2.new(1,0,0,36),
-AutomaticSize=az.Desc and"Y",
-ImageTransparency=1,
-Parent=an.UIElements.Menu.Frame.ScrollingFrame,
-ImageColor3=Color3.new(1,1,1),
-Active=not az.Locked,
-},{
-aj.NewRoundFrame(ao.MenuCorner-ao.MenuPadding,"Glass-1.4",{
-Size=UDim2.new(1,0,1,0),
-ThemeTag={
-ImageColor3="DropdownTabBorder",
-},
-ImageTransparency=1,
-Name="Highlight",
-},{
-
-
-
-
-
-
-
-
-
-
-
-
-
-}),
-ak("Frame",{
-Size=UDim2.new(1,0,1,0),
-BackgroundTransparency=1,
-},{
-ak("UIListLayout",{
-Padding=UDim.new(0,ao.TabPadding),
-FillDirection="Horizontal",
-VerticalAlignment="Center",
-}),
-ak("UIPadding",{
-PaddingTop=UDim.new(0,ao.TabPadding),
-PaddingLeft=UDim.new(0,ao.TabPadding),
-PaddingRight=UDim.new(0,ao.TabPadding),
-PaddingBottom=UDim.new(0,ao.TabPadding),
-}),
-ak("UICorner",{
-CornerRadius=UDim.new(0,ao.MenuCorner-ao.MenuPadding)
-}),
-aA,
-ak("Frame",{
-Size=UDim2.new(1,aA and-ao.TabPadding-ao.TabIcon or 0,0,0),
-BackgroundTransparency=1,
-AutomaticSize="Y",
-Name="Title",
-},{
-ak("TextLabel",{
-Text=az.Name,
-TextXAlignment="Left",
-FontFace=Font.new(aj.Font,Enum.FontWeight.Medium),
-ThemeTag={
-TextColor3="Text",
-BackgroundColor3="Text"
-},
-TextSize=15,
-BackgroundTransparency=1,
-TextTransparency=aq=="Dropdown"and.4 or.05,
-LayoutOrder=999,
-AutomaticSize="Y",
-Size=UDim2.new(1,0,0,0),
-}),
-ak("TextLabel",{
-Text=az.Desc or"",
-TextXAlignment="Left",
-FontFace=Font.new(aj.Font,Enum.FontWeight.Regular),
-ThemeTag={
-TextColor3="Text",
-BackgroundColor3="Text"
-},
-TextSize=15,
-BackgroundTransparency=1,
-TextTransparency=aq=="Dropdown"and.6 or.35,
-LayoutOrder=999,
-AutomaticSize="Y",
-TextWrapped=true,
-Size=UDim2.new(1,0,0,0),
-Visible=az.Desc and true or false,
-Name="Desc",
-}),
-ak("UIListLayout",{
-Padding=UDim.new(0,ao.TabPadding/3),
-FillDirection="Vertical",
-}),
-})
-})
-},true)
-
-if az.Locked then
-az.UIElements.TabItem.Frame.Title.TextLabel.TextTransparency=0.6
-if az.UIElements.TabIcon then
-az.UIElements.TabIcon.ImageLabel.ImageTransparency=0.6
-end
-end
-
-if an.Multi and typeof(an.Value)=="string"then
-for aB,aC in next,an.Values do
-if typeof(aC)=="table"then
-if aC.Title==an.Value then an.Value={aC}end
-else
-if aC==an.Value then an.Value={an.Value}end
-end
-end
-end
-
-if an.Multi then
-local aB=false
-if typeof(an.Value)=="table"then
-for aC,aD in ipairs(an.Value)do
-local aE=typeof(aD)=="table"and aD.Title or aD
-if aE==az.Name then
-aB=true
-break
-end
-end
-end
-az.Selected=aB
-else
-local aB=typeof(an.Value)=="table"and an.Value.Title or an.Value
-az.Selected=aB==az.Name
-end
-
-if az.Selected and not az.Locked then
-az.UIElements.TabItem.ImageTransparency=.95
-az.UIElements.TabItem.Highlight.ImageTransparency=.75
-az.UIElements.TabItem.Frame.Title.TextLabel.TextTransparency=0
-if az.UIElements.TabIcon then
-az.UIElements.TabIcon.ImageLabel.ImageTransparency=0
-end
-end
-
-an.Tabs[ax]=az
-
-ar:Display()
-
-if aq=="Dropdown"then
-aj.AddSignal(az.UIElements.TabItem.MouseButton1Click,function()
-if az.Locked then return end
-
-if an.Multi then
-if not az.Selected then
-az.Selected=true
-al(az.UIElements.TabItem,0.1,{ImageTransparency=.95}):Play()
-al(az.UIElements.TabItem.Highlight,0.1,{ImageTransparency=.75}):Play()
-al(az.UIElements.TabItem.Frame.Title.TextLabel,0.1,{TextTransparency=0}):Play()
-if az.UIElements.TabIcon then
-al(az.UIElements.TabIcon.ImageLabel,0.1,{ImageTransparency=0}):Play()
-end
-table.insert(an.Value,az.Original)
-else
-if not an.AllowNone and#an.Value==1 then
-return
-end
-az.Selected=false
-al(az.UIElements.TabItem,0.1,{ImageTransparency=1}):Play()
-al(az.UIElements.TabItem.Highlight,0.1,{ImageTransparency=1}):Play()
-al(az.UIElements.TabItem.Frame.Title.TextLabel,0.1,{TextTransparency=.4}):Play()
-if az.UIElements.TabIcon then
-al(az.UIElements.TabIcon.ImageLabel,0.1,{ImageTransparency=.2}):Play()
-end
-
-for aB,aC in next,an.Value do
-if typeof(aC)=="table"and(aC.Title==az.Name)or(aC==az.Name)then
-table.remove(an.Value,aB)
-break
-end
-end
-end
-else
-for aB,aC in next,an.Tabs do
-al(aC.UIElements.TabItem,0.1,{ImageTransparency=1}):Play()
-al(aC.UIElements.TabItem.Highlight,0.1,{ImageTransparency=1}):Play()
-al(aC.UIElements.TabItem.Frame.Title.TextLabel,0.1,{TextTransparency=.4}):Play()
-if aC.UIElements.TabIcon then
-al(aC.UIElements.TabIcon.ImageLabel,0.1,{ImageTransparency=.2}):Play()
-end
-aC.Selected=false
-end
-az.Selected=true
-al(az.UIElements.TabItem,0.1,{ImageTransparency=.95}):Play()
-al(az.UIElements.TabItem.Highlight,0.1,{ImageTransparency=.75}):Play()
-al(az.UIElements.TabItem.Frame.Title.TextLabel,0.1,{TextTransparency=0}):Play()
-if az.UIElements.TabIcon then
-al(az.UIElements.TabIcon.ImageLabel,0.1,{ImageTransparency=0}):Play()
-end
-an.Value=az.Original
-end
-Callback()
-end)
-elseif aq=="Menu"then
-if not az.Locked then
-aj.AddSignal(az.UIElements.TabItem.MouseEnter,function()
-al(az.UIElements.TabItem,0.08,{ImageTransparency=.95}):Play()
-end)
-aj.AddSignal(az.UIElements.TabItem.InputEnded,function()
-al(az.UIElements.TabItem,0.08,{ImageTransparency=1}):Play()
-end)
-end
-aj.AddSignal(az.UIElements.TabItem.MouseButton1Click,function()
-if az.Locked then return end
-Callback(ay.Callback or function()end)
-end)
+function ar.CreateOption(value, index)
+    local tab = {
+        Name = typeof(value) == "table" and value.Title or value,
+        Desc = typeof(value) == "table" and value.Desc or nil,
+        Icon = typeof(value) == "table" and value.Icon or nil,
+        IconSize = typeof(value) == "table" and value.IconSize or nil,
+        Original = value,
+        Selected = false,
+        Locked = typeof(value) == "table" and value.Locked or false,
+        UIElements = {},
+    }
+    
+    local icon
+    if tab.Icon then
+        icon = aj.Image(
+            tab.Icon,
+            tab.Icon,
+            0,
+            am.Window.Folder,
+            "Dropdown",
+            true
+        )
+        icon.Size = UDim2.new(0, tab.IconSize or ao.TabIcon, 0, tab.IconSize or ao.TabIcon)
+        icon.ImageLabel.ImageTransparency = aq == "Dropdown" and .2 or 0
+        tab.UIElements.TabIcon = icon
+    end
+    
+    tab.UIElements.TabItem = aj.NewRoundFrame(ao.MenuCorner - ao.MenuPadding, "Squircle", {
+        Size = UDim2.new(1, 0, 0, 36),
+        AutomaticSize = tab.Desc and "Y",
+        ImageTransparency = 1,
+        Parent = an.UIElements.Menu.Frame.ScrollingFrame,
+        ImageColor3 = Color3.new(1, 1, 1),
+        Active = not tab.Locked,
+    }, {
+        aj.NewRoundFrame(ao.MenuCorner - ao.MenuPadding, "Glass-1.4", {
+            Size = UDim2.new(1, 0, 1, 0),
+            ThemeTag = {
+                ImageColor3 = "DropdownTabBorder",
+            },
+            ImageTransparency = 1,
+            Name = "Highlight",
+        }),
+        ak("Frame", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+        }, {
+            ak("UIListLayout", {
+                Padding = UDim.new(0, ao.TabPadding),
+                FillDirection = "Horizontal",
+                VerticalAlignment = "Center",
+            }),
+            ak("UIPadding", {
+                PaddingTop = UDim.new(0, ao.TabPadding),
+                PaddingLeft = UDim.new(0, ao.TabPadding),
+                PaddingRight = UDim.new(0, ao.TabPadding),
+                PaddingBottom = UDim.new(0, ao.TabPadding),
+            }),
+            ak("UICorner", {
+                CornerRadius = UDim.new(0, ao.MenuCorner - ao.MenuPadding)
+            }),
+            icon,
+            ak("Frame", {
+                Size = UDim2.new(1, icon and -ao.TabPadding - ao.TabIcon or 0, 0, 0),
+                BackgroundTransparency = 1,
+                AutomaticSize = "Y",
+                Name = "Title",
+            }, {
+                ak("TextLabel", {
+                    Text = tab.Name,
+                    TextXAlignment = "Left",
+                    FontFace = Font.new(aj.Font, Enum.FontWeight.Medium),
+                    ThemeTag = {
+                        TextColor3 = "Text",
+                        BackgroundColor3 = "Text"
+                    },
+                    TextSize = 15,
+                    BackgroundTransparency = 1,
+                    TextTransparency = aq == "Dropdown" and .4 or .05,
+                    LayoutOrder = 999,
+                    AutomaticSize = "Y",
+                    Size = UDim2.new(1, 0, 0, 0),
+                }),
+                ak("TextLabel", {
+                    Text = tab.Desc or "",
+                    TextXAlignment = "Left",
+                    FontFace = Font.new(aj.Font, Enum.FontWeight.Regular),
+                    ThemeTag = {
+                        TextColor3 = "Text",
+                        BackgroundColor3 = "Text"
+                    },
+                    TextSize = 15,
+                    BackgroundTransparency = 1,
+                    TextTransparency = aq == "Dropdown" and .6 or .35,
+                    LayoutOrder = 999,
+                    AutomaticSize = "Y",
+                    TextWrapped = true,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    Visible = tab.Desc and true or false,
+                    Name = "Desc",
+                }),
+                ak("UIListLayout", {
+                    Padding = UDim.new(0, ao.TabPadding / 3),
+                    FillDirection = "Vertical",
+                }),
+            })
+        })
+    }, true)
+    
+    if tab.Locked then
+        tab.UIElements.TabItem.Frame.Title.TextLabel.TextTransparency = 0.6
+        if tab.UIElements.TabIcon then
+            tab.UIElements.TabIcon.ImageLabel.ImageTransparency = 0.6
+        end
+    end
+    
+    -- 处理多选和单选
+    if an.Multi and typeof(an.Value) == "string" then
+        for _, v in ipairs(an.Values) do
+            if typeof(v) == "table" then
+                if v.Title == an.Value then an.Value = { v } end
+            else
+                if v == an.Value then an.Value = { an.Value } end
+            end
+        end
+    end
+    
+    if an.Multi then
+        local selected = false
+        if typeof(an.Value) == "table" then
+            for _, v in ipairs(an.Value) do
+                local name = typeof(v) == "table" and v.Title or v
+                if name == tab.Name then
+                    selected = true
+                    break
+                end
+            end
+        end
+        tab.Selected = selected
+    else
+        local current = typeof(an.Value) == "table" and an.Value.Title or an.Value
+        tab.Selected = current == tab.Name
+    end
+    
+    if tab.Selected and not tab.Locked then
+        tab.UIElements.TabItem.ImageTransparency = .95
+        tab.UIElements.TabItem.Highlight.ImageTransparency = .75
+        tab.UIElements.TabItem.Frame.Title.TextLabel.TextTransparency = 0
+        if tab.UIElements.TabIcon then
+            tab.UIElements.TabIcon.ImageLabel.ImageTransparency = 0
+        end
+    end
+    
+    an.Tabs[index] = tab
+    
+    ar:Display()
+    
+    -- 添加点击事件
+    if aq == "Dropdown" then
+        aj.AddSignal(tab.UIElements.TabItem.MouseButton1Click, function()
+            if tab.Locked then return end
+            
+            if an.Multi then
+                if not tab.Selected then
+                    tab.Selected = true
+                    al(tab.UIElements.TabItem, 0.1, { ImageTransparency = .95 }):Play()
+                    al(tab.UIElements.TabItem.Highlight, 0.1, { ImageTransparency = .75 }):Play()
+                    al(tab.UIElements.TabItem.Frame.Title.TextLabel, 0.1, { TextTransparency = 0 }):Play()
+                    if tab.UIElements.TabIcon then
+                        al(tab.UIElements.TabIcon.ImageLabel, 0.1, { ImageTransparency = 0 }):Play()
+                    end
+                    table.insert(an.Value, tab.Original)
+                else
+                    if not an.AllowNone and #an.Value == 1 then
+                        return
+                    end
+                    tab.Selected = false
+                    al(tab.UIElements.TabItem, 0.1, { ImageTransparency = 1 }):Play()
+                    al(tab.UIElements.TabItem.Highlight, 0.1, { ImageTransparency = 1 }):Play()
+                    al(tab.UIElements.TabItem.Frame.Title.TextLabel, 0.1, { TextTransparency = .4 }):Play()
+                    if tab.UIElements.TabIcon then
+                        al(tab.UIElements.TabIcon.ImageLabel, 0.1, { ImageTransparency = .2 }):Play()
+                    end
+                    
+                    for i, v in ipairs(an.Value) do
+                        if (typeof(v) == "table" and v.Title == tab.Name) or v == tab.Name then
+                            table.remove(an.Value, i)
+                            break
+                        end
+                    end
+                end
+            else
+                for _, t in ipairs(an.Tabs) do
+                    al(t.UIElements.TabItem, 0.1, { ImageTransparency = 1 }):Play()
+                    al(t.UIElements.TabItem.Highlight, 0.1, { ImageTransparency = 1 }):Play()
+                    al(t.UIElements.TabItem.Frame.Title.TextLabel, 0.1, { TextTransparency = .4 }):Play()
+                    if t.UIElements.TabIcon then
+                        al(t.UIElements.TabIcon.ImageLabel, 0.1, { ImageTransparency = .2 }):Play()
+                    end
+                    t.Selected = false
+                end
+                tab.Selected = true
+                al(tab.UIElements.TabItem, 0.1, { ImageTransparency = .95 }):Play()
+                al(tab.UIElements.TabItem.Highlight, 0.1, { ImageTransparency = .75 }):Play()
+                al(tab.UIElements.TabItem.Frame.Title.TextLabel, 0.1, { TextTransparency = 0 }):Play()
+                if tab.UIElements.TabIcon then
+                    al(tab.UIElements.TabIcon.ImageLabel, 0.1, { ImageTransparency = 0 }):Play()
+                end
+                an.Value = tab.Original
+            end
+            Callback()
+        end)
+    elseif aq == "Menu" then
+        if not tab.Locked then
+            aj.AddSignal(tab.UIElements.TabItem.MouseEnter, function()
+                al(tab.UIElements.TabItem, 0.08, { ImageTransparency = .95 }):Play()
+            end)
+            aj.AddSignal(tab.UIElements.TabItem.InputEnded, function()
+                al(tab.UIElements.TabItem, 0.08, { ImageTransparency = 1 }):Play()
+            end)
+        end
+        aj.AddSignal(tab.UIElements.TabItem.MouseButton1Click, function()
+            if tab.Locked then return end
+            Callback(value.Callback or function() end)
+        end)
+    end
+    
+    RecalculateCanvasSize()
+    RecalculateListSize()
 end
 
-RecalculateCanvasSize()
-RecalculateListSize()
-else a.load'I'
-:New{Parent=an.UIElements.Menu.Frame.ScrollingFrame}
-end
-end
-
-local az=an.MenuWidth or 0
-if az==0 then
-for aA,aB in next,an.Tabs do
-if aB.UIElements.TabItem.Frame.UIListLayout then
-az=math.max(az,aB.UIElements.TabItem.Frame.UIListLayout.AbsoluteContentSize.X)
-end
-end
-end
-
-an.UIElements.MenuCanvas.Size=UDim2.new(0,az+6+6+5+5+18+6+6,an.UIElements.MenuCanvas.Size.Y.Scale,an.UIElements.MenuCanvas.Size.Y.Offset)
-Callback()
-
-an.Values=au
-end
-
+-- 初始化刷新
 ar:Refresh(an.Values)
 
 function ar.Select(at,au)
@@ -7268,379 +7344,117 @@ SearchBarHeight=39,
 TabIcon=18,
 }
 
-function aa.New(am,an)
-    local ao={
-        __type="Dropdown",
-        Title=an.Title or"Dropdown",
-        Desc=an.Desc or nil,
-        Locked=an.Locked or false,
-        LockedTitle=an.LockedTitle,
-        Values=an.Values or{},
-        MenuWidth=an.MenuWidth,
-        Value=an.Value,
-        AllowNone=an.AllowNone,
-        SearchBarEnabled=an.SearchBarEnabled or false,
-        Multi=an.Multi,
-        Callback=an.Callback or nil,
+function al.New(am,an)
+local ao={
+__type="Dropdown",
+Title=an.Title or"Dropdown",
+Desc=an.Desc or nil,
+Locked=an.Locked or false,
+LockedTitle=an.LockedTitle,
+Values=an.Values or{},
+MenuWidth=an.MenuWidth,
+Value=an.Value,
+AllowNone=an.AllowNone,
+SearchBarEnabled=an.SearchBarEnabled or false,
+Multi=an.Multi,
+Callback=an.Callback or nil,
 
-        UIElements={},
+UIElements={},
 
-        Opened=false,
-        Tabs={},
-    }
+Opened=false,
+Tabs={},
 
-    if ao.Multi and not ao.Value then
-        ao.Value={}
-    end
-    if ao.Values and typeof(ao.Value)=="number"then
-        ao.Value=ao.Values[ao.Value]
-    end
+Width=150,
+}
 
-    local ap=true
+if ao.Multi and not ao.Value then
+ao.Value={}
+end
+if ao.Values and typeof(ao.Value)=="number"then
+ao.Value=ao.Values[ao.Value]
+end
 
-    ao.DropdownFrame=a.load'z'{
-        Title=ao.Title,
-        Desc=ao.Desc,
-        Parent=an.Parent,
-        TextOffset=ao.Callback and ao.Width or 20,
-        Hover=not ao.Callback and true or false,
-        Tab=an.Tab,
-        Index=an.Index,
-        Window=an.Window,
-        ElementTable=ao,
-        ParentConfig=an,
-    }
+local ap=true
 
-    if ao.Callback then
-        ao.UIElements.Dropdown=ai("",nil,ao.DropdownFrame.UIElements.Main,nil,an.Window.NewElements and 12 or 10)
+ao.DropdownFrame=a.load'z'{
+Title=ao.Title,
+Desc=ao.Desc,
+Parent=an.Parent,
+TextOffset=ao.Callback and ao.Width or 20,
+Hover=not ao.Callback and true or false,
+Tab=an.Tab,
+Index=an.Index,
+Window=an.Window,
+ElementTable=ao,
+ParentConfig=an,
+}
 
-        ao.UIElements.Dropdown.Frame.Frame.TextLabel.TextTruncate="AtEnd"
-        ao.UIElements.Dropdown.Frame.Frame.TextLabel.Size=UDim2.new(1,ao.UIElements.Dropdown.Frame.Frame.TextLabel.Size.X.Offset-18-12-12,0,0)
 
-        ao.UIElements.Dropdown.Size=UDim2.new(0,ao.Width,0,36)
-        ao.UIElements.Dropdown.Position=UDim2.new(1,0,an.Window.NewElements and 0 or 0.5,0)
-        ao.UIElements.Dropdown.AnchorPoint=Vector2.new(1,an.Window.NewElements and 0 or 0.5)
-    end
+if ao.Callback then
+ao.UIElements.Dropdown=ah("",nil,ao.DropdownFrame.UIElements.Main,nil,an.Window.NewElements and 12 or 10)
 
-    -- 加入箭頭圖示
-    ak("ImageLabel", {
-        Image = aj.Icon"chevrons-up-down"[1],
-        ImageRectOffset = aj.Icon"chevrons-up-down"[2].ImageRectPosition,
-        ImageRectSize = aj.Icon"chevrons-up-down"[2].ImageRectSize,
-        Size = UDim2.new(0, 18, 0, 18),
-        Position = UDim2.new(1, ao.UIElements.Dropdown and -12 or 0, 0.5, 0),
-        ThemeTag = { ImageColor3 = "Icon" },
-        AnchorPoint = Vector2.new(1, 0.5),
-        Parent = ao.UIElements.Dropdown and ao.UIElements.Dropdown.Frame or ao.DropdownFrame.UIElements.Main
-    })
+ao.UIElements.Dropdown.Frame.Frame.TextLabel.TextTruncate="AtEnd"
+ao.UIElements.Dropdown.Frame.Frame.TextLabel.Size=UDim2.new(1,ao.UIElements.Dropdown.Frame.Frame.TextLabel.Size.X.Offset-18-12-12,0,0)
 
-    -- 建立下拉選單容器
-    local menuContainer = ak("Frame", {
-        Size = UDim2.new(0, ao.MenuWidth or 150, 0, 0),
-        BackgroundTransparency = 1,
-        Position = UDim2.new(1, 10, 0, 0),
-        AnchorPoint = Vector2.new(1, 0),
-        Visible = false,
-        Parent = ao.DropdownFrame.UIElements.Main,
-        ZIndex = 999,
-    })
+ao.UIElements.Dropdown.Size=UDim2.new(0,ao.Width,0,36)
+ao.UIElements.Dropdown.Position=UDim2.new(1,0,an.Window.NewElements and 0 or 0.5,0)
+ao.UIElements.Dropdown.AnchorPoint=Vector2.new(1,an.Window.NewElements and 0 or 0.5)
 
-    local menuBackground = aj.NewRoundFrame(15, "Squircle", {
-        Size = UDim2.new(1, 0, 1, 0),
-        ThemeTag = { ImageColor3 = "Background" },
-        ImageTransparency = 0.05,
-        Parent = menuContainer,
-    })
 
-    local scrollingFrame = ak("ScrollingFrame", {
-        Size = UDim2.new(1, -10, 1, -10),
-        Position = UDim2.new(0, 5, 0, 5),
-        BackgroundTransparency = 1,
-        ScrollBarThickness = 4,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = "Y",
-        Parent = menuBackground,
-    })
 
-    local uiList = ak("UIListLayout", {
-        Padding = UDim.new(0, 2),
-        SortOrder = "LayoutOrder",
-        Parent = scrollingFrame,
-    })
 
-    local optionButtons = {}
 
-    -- 更新選項的函數（核心功能）
-    local function updateOptions()
-        -- 清除舊按鈕
-        for _, btn in ipairs(optionButtons) do
-            btn:Destroy()
-        end
-        optionButtons = {}
 
-        -- 建立新選項按鈕
-        for i, value in ipairs(ao.Values) do
-            local btn = ak("TextButton", {
-                Size = UDim2.new(1, -10, 0, 30),
-                Position = UDim2.new(0, 5, 0, 0),
-                Text = "",
-                BackgroundTransparency = 1,
-                Parent = scrollingFrame,
-            })
 
-            local btnBackground = aj.NewRoundFrame(8, "Squircle", {
-                Size = UDim2.new(1, 0, 1, 0),
-                ImageTransparency = 1,
-                ThemeTag = { ImageColor3 = "Text" },
-                Parent = btn,
-            }, nil, true)
 
-            local btnText = ak("TextLabel", {
-                Size = UDim2.new(1, -20, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
-                Text = tostring(value),
-                TextXAlignment = "Left",
-                BackgroundTransparency = 1,
-                ThemeTag = { TextColor3 = "Text" },
-                FontFace = Font.new(aj.Font, Enum.FontWeight.Medium),
-                TextSize = 15,
-                Parent = btn,
-            })
+end
 
-            -- 檢查是否為當前選中值
-            local isSelected = false
-            if ao.Multi then
-                if type(ao.Value) == "table" then
-                    for _, v in ipairs(ao.Value) do
-                        if v == value then
-                            isSelected = true
-                            break
-                        end
-                    end
-                end
-            else
-                isSelected = (ao.Value == value)
-            end
+ao.DropdownMenu=aj(am,ao,al,ap,"Dropdown")
 
-            if isSelected then
-                al(btnBackground, 0, { ImageTransparency = 0.9 })
-            end
 
-            -- 滑鼠懸停效果
-            aj.AddSignal(btn.MouseEnter, function()
-                al(btnBackground, 0.1, { ImageTransparency = 0.95 })
-            end)
+ao.Display=ao.DropdownMenu.Display
+ao.Refresh=ao.DropdownMenu.Refresh
+ao.Select=ao.DropdownMenu.Select
+ao.Open=ao.DropdownMenu.Open
+ao.Close=ao.DropdownMenu.Close
 
-            aj.AddSignal(btn.MouseLeave, function()
-                al(btnBackground, 0.1, { ImageTransparency = isSelected and 0.9 or 1 })
-            end)
+af("ImageLabel",{
+Image=ae.Icon"chevrons-up-down"[1],
+ImageRectOffset=ae.Icon"chevrons-up-down"[2].ImageRectPosition,
+ImageRectSize=ae.Icon"chevrons-up-down"[2].ImageRectSize,
+Size=UDim2.new(0,18,0,18),
+Position=UDim2.new(
+1,
+ao.UIElements.Dropdown and-12 or 0,
+0.5,
+0
+),
+ThemeTag={
+ImageColor3="Icon"
+},
+AnchorPoint=Vector2.new(1,0.5),
+Parent=ao.UIElements.Dropdown and ao.UIElements.Dropdown.Frame or ao.DropdownFrame.UIElements.Main
+})
 
-            -- 點擊事件
-            aj.AddSignal(btn.MouseButton1Click, function()
-                if ao.Locked then return end
 
-                if ao.Multi then
-                    -- 多選邏輯
-                    if type(ao.Value) ~= "table" then
-                        ao.Value = {}
-                    end
 
-                    local found = false
-                    for i, v in ipairs(ao.Value) do
-                        if v == value then
-                            table.remove(ao.Value, i)
-                            found = true
-                            break
-                        end
-                    end
+function ao.Lock(aq)
+ao.Locked=true
+ap=false
+return ao.DropdownFrame:Lock(ao.LockedTitle)
+end
+function ao.Unlock(aq)
+ao.Locked=false
+ap=true
+return ao.DropdownFrame:Unlock()
+end
 
-                    if not found then
-                        table.insert(ao.Value, value)
-                    end
+if ao.Locked then
+ao:Lock()
+end
 
-                    -- 更新顯示文字
-                    local displayText = ""
-                    for i, v in ipairs(ao.Value) do
-                        displayText = displayText .. tostring(v) .. (i < #ao.Value and ", " or "")
-                    end
-                    if ao.UIElements.Dropdown then
-                        ao.UIElements.Dropdown.Frame.Frame.TextLabel.Text = (displayText ~= "" and displayText) or "--"
-                    end
 
-                    if ao.Callback then
-                        ao.Callback(ao.Value)
-                    end
-
-                    -- 更新所有按鈕的選中狀態
-                    for _, b in ipairs(optionButtons) do
-                        local btnValue = b:FindFirstChildOfClass("TextLabel").Text
-                        local selected = false
-                        for _, v in ipairs(ao.Value) do
-                            if tostring(v) == btnValue then
-                                selected = true
-                                break
-                            end
-                        end
-                        local bg = b:FindFirstChildOfClass("ImageLabel")
-                        if bg then
-                            al(bg, 0.1, { ImageTransparency = selected and 0.9 or 1 })
-                        end
-                    end
-
-                else
-                    -- 單選邏輯
-                    ao.Value = value
-                    if ao.UIElements.Dropdown then
-                        ao.UIElements.Dropdown.Frame.Frame.TextLabel.Text = tostring(value)
-                    end
-                    menuContainer.Visible = false
-                    if ao.Callback then
-                        ao.Callback(value)
-                    end
-
-                    -- 更新所有按鈕的選中狀態
-                    for _, b in ipairs(optionButtons) do
-                        local btnValue = b:FindFirstChildOfClass("TextLabel").Text
-                        local selected = (btnValue == tostring(value))
-                        local bg = b:FindFirstChildOfClass("ImageLabel")
-                        if bg then
-                            al(bg, 0.1, { ImageTransparency = selected and 0.9 or 1 })
-                        end
-                    end
-                end
-            end)
-
-            table.insert(optionButtons, btn)
-        end
-
-        -- 更新選單高度
-        task.wait(0.05)
-        local contentHeight = uiList.AbsoluteContentSize.Y + 10
-        menuContainer.Size = UDim2.new(0, ao.MenuWidth or 150, 0, math.min(contentHeight, 300))
-    end
-
-    -- 初始化選項
-    updateOptions()
-
-    -- 點擊主按鈕開啟/關閉選單
-    if ao.UIElements.Dropdown then
-        aj.AddSignal(ao.UIElements.Dropdown.MouseButton1Click, function()
-            if ao.Locked then return end
-            menuContainer.Visible = not menuContainer.Visible
-        end)
-    end
-
-    -- 點擊外部關閉選單
-    aj.AddSignal(ae.InputBegan, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if menuContainer.Visible then
-                local mousePos = af
-                local containerPos = menuContainer.AbsolutePosition
-                local containerSize = menuContainer.AbsoluteSize
-
-                if mousePos.X < containerPos.X or mousePos.X > containerPos.X + containerSize.X or
-                   mousePos.Y < containerPos.Y or mousePos.Y > containerPos.Y + containerSize.Y then
-                    menuContainer.Visible = false
-                end
-            end
-        end
-    end)
-
-    -- 公開方法：刷新選項
-    function ao.Refresh(newValues)
-        ao.Values = newValues or {}
-        updateOptions()
-
-        -- 如果當前選中的值不在新選項中，重置
-        if not ao.Multi then
-            local valueExists = false
-            for _, v in ipairs(ao.Values) do
-                if v == ao.Value then
-                    valueExists = true
-                    break
-                end
-            end
-            if not valueExists and #ao.Values > 0 then
-                ao.Value = ao.Values[1]
-                if ao.UIElements.Dropdown then
-                    ao.UIElements.Dropdown.Frame.Frame.TextLabel.Text = tostring(ao.Value)
-                end
-            elseif #ao.Values == 0 then
-                ao.Value = nil
-                if ao.UIElements.Dropdown then
-                    ao.UIElements.Dropdown.Frame.Frame.TextLabel.Text = "--"
-                end
-            end
-        end
-    end
-
-    -- 公開方法：設定值
-    function ao.SetValue(newValue)
-        if ao.Multi then
-            ao.Value = type(newValue) == "table" and newValue or {newValue}
-            local displayText = ""
-            for i, v in ipairs(ao.Value) do
-                displayText = displayText .. tostring(v) .. (i < #ao.Value and ", " or "")
-            end
-            if ao.UIElements.Dropdown then
-                ao.UIElements.Dropdown.Frame.Frame.TextLabel.Text = (displayText ~= "" and displayText) or "--"
-            end
-        else
-            ao.Value = newValue
-            if ao.UIElements.Dropdown then
-                ao.UIElements.Dropdown.Frame.Frame.TextLabel.Text = tostring(newValue or "--")
-            end
-        end
-
-        -- 更新選中狀態
-        for _, btn in ipairs(optionButtons) do
-            local btnValue = btn:FindFirstChildOfClass("TextLabel").Text
-            local selected = false
-            if ao.Multi and type(ao.Value) == "table" then
-                for _, v in ipairs(ao.Value) do
-                    if tostring(v) == btnValue then
-                        selected = true
-                        break
-                    end
-                end
-            else
-                selected = (btnValue == tostring(ao.Value))
-            end
-            local bg = btn:FindFirstChildOfClass("ImageLabel")
-            if bg then
-                al(bg, 0.1, { ImageTransparency = selected and 0.9 or 1 })
-            end
-        end
-    end
-
-    -- 公開方法：取得值
-    function ao.GetValue()
-        return ao.Value
-    end
-
-    -- 鎖定/解鎖
-    function ao.Lock(lockTitle)
-        ao.Locked = true
-        ap = false
-        if ao.DropdownFrame and ao.DropdownFrame.Lock then
-            ao.DropdownFrame:Lock(lockTitle or ao.LockedTitle)
-        end
-    end
-
-    function ao.Unlock()
-        ao.Locked = false
-        ap = true
-        if ao.DropdownFrame and ao.DropdownFrame.Unlock then
-            ao.DropdownFrame:Unlock()
-        end
-    end
-
-    -- 初始化鎖定狀態
-    if ao.Locked then
-        ao:Lock()
-    end
-
-    return ao.__type, ao
+return ao.__type,ao
 end
 
 return al end function a.L()
@@ -8838,7 +8652,13 @@ Padding=10,
 Elements={},
 
 Expandable=false,
+Window=ak.Window,
+Parent=ak.Parent,
+IconImage=nil,
+Content=nil,
+ElementFrame=nil,
 }
+
 
 local am
 
@@ -8960,9 +8780,9 @@ Visible=al.Box and al.BoxBorder,
 Name="Outline",
 }),
 ae("TextButton",{
-Size=UDim2.new(1,0,0,Expandable and 0 or al.HeaderSize),
+Size=UDim2.new(1,0,0,al.Expandable and 0 or al.HeaderSize),
 BackgroundTransparency=1,
-AutomaticSize=Expandable and nil or"Y",
+AutomaticSize=al.Expandable and nil or"Y",
 Text="",
 Name="Top",
 },{
@@ -9006,7 +8826,8 @@ VerticalAlignment="Top",
 
 
 al.ElementFrame=ar
-
+al.IconImage=an.ImageLabel
+al.Content=ar.Content
 
 local as=ak.ElementsModule
 
@@ -9031,41 +8852,72 @@ al.Desc=au
 if not aq then
 aq=createTitle(au,"Desc")
 end
-aq.Text=Title
+aq.Text=au
 end
 
 function al.Destroy(at)
 for au,av in next,al.Elements do
+if av.Destroy then
 av:Destroy()
 end
-
-
-
-
-
-
-
+end
 
 ar:Destroy()
 end
 
-function al.Open(at)
-if al.Expandable then
-al.Opened=true
-af(ar,0.33,{
-Size=UDim2.new(ar.Size.X.Scale,ar.Size.X.Offset,0,al.HeaderSize+(ar.Content.AbsoluteSize.Y/ak.UIScale))
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+-- ========== 增强的 Open 方法 ==========
+function al:Open()
+if self.Expandable then
+self.Opened = true
 
-af(an.ImageLabel,0.2,{Rotation=180},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+-- 计算目标高度
+local targetHeight = self.HeaderSize + (self.Content.AbsoluteSize.Y / (self.Window and self.Window:GetUIScale() or 1))
+
+-- 动画展开
+af(self.ElementFrame, 0.33, {
+Size = UDim2.new(
+self.ElementFrame.Size.X.Scale,
+self.ElementFrame.Size.X.Offset,
+0,
+targetHeight
+)
+}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+
+af(self.IconImage, 0.2, {Rotation = 180}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+
+-- 刷新父容器
+task.spawn(function()
+task.wait(0.35)
+if self.Parent and self.Parent.RefreshLayout then
+self.Parent:RefreshLayout()
+end
+end)
 end
 end
-function al.Close(at)
-if al.Expandable then
-al.Opened=false
-af(ar,0.26,{
-Size=UDim2.new(ar.Size.X.Scale,ar.Size.X.Offset,0,al.HeaderSize)
-},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
-af(an.ImageLabel,0.2,{Rotation=0},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+
+-- ========== 增强的 Close 方法 ==========
+function al:Close()
+if self.Expandable then
+self.Opened = false
+
+af(self.ElementFrame, 0.26, {
+Size = UDim2.new(
+self.ElementFrame.Size.X.Scale,
+self.ElementFrame.Size.X.Offset,
+0,
+self.HeaderSize
+)
+}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+
+af(self.IconImage, 0.2, {Rotation = 0}, Enum.EasingStyle.Quint, Enum.EasingDirection.Out):Play()
+
+-- 刷新父容器
+task.spawn(function()
+task.wait(0.3)
+if self.Parent and self.Parent.RefreshLayout then
+self.Parent:RefreshLayout()
+end
+end)
 end
 end
 
@@ -9088,14 +8940,6 @@ end)
 task.spawn(function()
 task.wait(0.02)
 if al.Expandable then
-
-
-
-
-
-
-
-
 ar.Size=UDim2.new(ar.Size.X.Scale,ar.Size.X.Offset,0,al.HeaderSize)
 ar.AutomaticSize="None"
 ar.Top.Size=UDim2.new(1,0,0,al.HeaderSize)
@@ -9105,7 +8949,6 @@ end
 if al.Opened then
 al:Open()
 end
-
 end)
 
 return al.__type,al
@@ -9216,7 +9059,7 @@ ae("UIListLayout",{
 FillDirection="Horizontal",
 HorizontalAlignment="Center",
 
-Padding=UDim.new(0,aj.Tab and aj.Tab.Gap or(Window.NewElements and 1 or 6))
+Padding=UDim.new(0,aj.Tab and aj.Tab.Gap or(aj.Window.NewElements and 1 or 6))
 }),
 })
 
@@ -9277,137 +9120,131 @@ return ak.__type,ak
 end
 
 return af end function a.T()
-return{
-Elements={
-Paragraph=a.load'A',
-Button=a.load'B',
-Toggle=a.load'E',
-Slider=a.load'F',
-Keybind=a.load'G',
-Input=a.load'H',
-Dropdown=a.load'K',
-Code=a.load'N',
-Colorpicker=a.load'O',
-Section=a.load'P',
-Divider=a.load'I',
-Space=a.load'Q',
-Image=a.load'R',
-Group=a.load'S',
-
+-- ========== 增强的元素加载模块 ==========
+return {
+Elements = {
+Paragraph = a.load'A',
+Button = a.load'B',
+Toggle = a.load'E',
+Slider = a.load'F',
+Keybind = a.load'G',
+Input = a.load'H',
+Dropdown = a.load'K',
+Code = a.load'N',
+Colorpicker = a.load'O',
+Section = a.load'P',
+Divider = a.load'I',
+Space = a.load'Q',
+Image = a.load'R',
+Group = a.load'S',
 },
-Load=function(aa,ae,af,ah,aj,ak,al,am,an)
-for ao,ap in next,af do
-aa[ao]=function(aq,ar)
-ar=ar or{}
-ar.Tab=an or aa
-ar.ParentType=aa.__type
-ar.ParentTable=aa
-ar.Index=#aa.Elements+1
-ar.GlobalIndex=#ah.AllElements+1
-ar.Parent=ae
-ar.Window=ah
-ar.WindUI=aj
-ar.UIScale=am
-ar.ElementsModule=al local
-
-as, au=ap:New(ar)
-
-if ar.Flag and typeof(ar.Flag)=="string"then
-if ah.CurrentConfig then
-ah.CurrentConfig:Register(ar.Flag,au)
-
-if ah.PendingConfigData and ah.PendingConfigData[ar.Flag]then
-local av=ah.PendingConfigData[ar.Flag]
-
-local aw=ah.ConfigManager
-if aw.Parser[av.__type]then
-task.defer(function()
-local ax,ay=pcall(function()
-aw.Parser[av.__type].Load(au,av)
-end)
-
-if ax then
-ah.PendingConfigData[ar.Flag]=nil
-else
-warn("[ WindUI ] Failed to apply pending config for '"..ar.Flag.."': "..tostring(ay))
-end
-end)
-end
-end
-else
-ah.PendingFlags=ah.PendingFlags or{}
-ah.PendingFlags[ar.Flag]=au
-end
-end
-
-local av
-for aw,ax in next,au do
-if typeof(ax)=="table"and aw~="ElementFrame"and aw:match"Frame$"then
-av=ax
-break
-end
-end
-
-if av then
-au.ElementFrame=av.UIElements.Main
-function au.SetTitle(ay,az)
-av:SetTitle(az)
-end
-function au.SetDesc(ay,az)
-av:SetDesc(az)
-end
-function au.Highlight(ay)
-av:Highlight()
-end
-function au.Destroy(ay)
-av:Destroy()
-
-table.remove(ah.AllElements,ar.GlobalIndex)
-table.remove(aa.Elements,ar.Index)
-table.remove(an.Elements,ar.Index)
-aa:UpdateAllElementShapes(aa)
-end
-end
-
-
-
-ah.AllElements[ar.Index]=au
-aa.Elements[ar.Index]=au
-if an then an.Elements[ar.Index]=au end
-
-if ah.NewElements then
-aa:UpdateAllElementShapes(aa)
-end
-
-if ak then
-ak(au,aa.Elements)
-end
-return au
-end
-end
-function aa.UpdateAllElementShapes(aq,ar)
-for as,au in next,ar.Elements do
-local av
-for aw,ax in pairs(au)do
-if typeof(ax)=="table"and aw:match"Frame$"then
-av=ax
-break
-end
-end
-
-if av then
-
-av.Index=as
-if av.UpdateShape then
-
-av.UpdateShape(ar)
-end
-end
-end
-end
+Load = function(parent, container, elements, window, windui, callback, module, uiScale, tab)
+    for name, elementFunc in pairs(elements) do
+        parent[name] = function(self, config)
+            config = config or {}
+            config.Tab = tab or parent
+            config.ParentType = parent.__type
+            config.ParentTable = parent
+            config.Index = #parent.Elements + 1
+            config.GlobalIndex = #window.AllElements + 1
+            config.Parent = container
+            config.Window = window
+            config.WindUI = windui
+            config.UIScale = uiScale
+            config.ElementsModule = module
+            
+            local elementType, element = elementFunc:New(config)
+            
+            -- 添加元素刷新功能
+            function element:Refresh()
+                if parent.UpdateAllElementShapes then
+                    parent:UpdateAllElementShapes(parent)
+                end
+                
+                -- 刷新容器布局
+                if container and container.Parent then
+                    task.spawn(function()
+                        task.wait()
+                        
+                        -- 更新 ScrollingFrame CanvasSize
+                        local scrollingFrame = container.Parent
+                        if scrollingFrame:IsA("ScrollingFrame") then
+                            local layout = scrollingFrame:FindFirstChildOfClass("UIListLayout")
+                            if layout then
+                                scrollingFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y)
+                            end
+                        end
+                        
+                        -- 如果有回调，调用它
+                        if callback then
+                            callback(element, parent.Elements)
+                        end
+                    end)
+                end
+            end
+            
+            -- 添加到元素列表
+            window.AllElements[config.GlobalIndex] = element
+            parent.Elements[config.Index] = element
+            if tab then 
+                tab.Elements[config.Index] = element 
+            end
+            
+            -- 刷新布局
+            if window.NewElements then
+                parent:UpdateAllElementShapes(parent)
+            end
+            
+            -- 触发元素添加后的布局更新
+            task.spawn(function()
+                task.wait()
+                
+                -- 更新标签页布局
+                if tab and tab.RefreshLayout then
+                    tab:RefreshLayout()
+                end
+                
+                -- 更新容器
+                if container and container.Parent then
+                    local scrollingFrame = container.Parent
+                    if scrollingFrame:IsA("ScrollingFrame") then
+                        local layout = scrollingFrame:FindFirstChildOfClass("UIListLayout")
+                        if layout then
+                            scrollingFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y)
+                        end
+                    end
+                end
+            end)
+            
+            if callback then
+                callback(element, parent.Elements)
+            end
+            
+            return element
+        end
+    end
+    
+    -- 添加刷新所有元素的方法
+    function parent:RefreshAll()
+        for _, element in ipairs(parent.Elements) do
+            if element and element.Refresh then
+                element:Refresh()
+            end
+        end
+        
+        -- 更新容器
+        if container and container.Parent then
+            local scrollingFrame = container.Parent
+            if scrollingFrame:IsA("ScrollingFrame") then
+                local layout = scrollingFrame:FindFirstChildOfClass("UIListLayout")
+                if layout then
+                    scrollingFrame.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y)
+                end
+            end
+        end
+    end
 end,
-
-}end function a.U()
+} end function a.U()
 local aa=(cloneref or clonereference or function(aa)return aa end)
 
 aa(game:GetService"UserInputService")
@@ -9671,9 +9508,43 @@ HorizontalAlignment="Center",
 })
 })
 
+-- ========== 增强的刷新方法 ==========
+function ap:RefreshLayout()
+    local container = self.UIElements.ContainerFrame
+    if container then
+        local layout = container:FindFirstChildOfClass("UIListLayout")
+        if layout then
+            task.wait() -- 等待一帧让 Roblox 更新布局
+            
+            local contentHeight = layout.AbsoluteContentSize.Y
+            local padding = container.UIPadding
+            
+            if padding then
+                contentHeight = contentHeight + 
+                    padding.PaddingTop.Offset + 
+                    padding.PaddingBottom.Offset
+            end
+            
+            container.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
+            
+            -- 触发滚动条更新（如果存在）
+            if Window and Window.ScrollBarEnabled then
+                local scrollBar = container:FindFirstChild("ScrollBar")
+                if scrollBar and scrollBar.Update then
+                    scrollBar:Update()
+                end
+            end
+        end
+    end
+end
 
-
-
+-- 重写添加元素方法以自动刷新
+local originalAdd = ap.Add
+function ap:Add(element)
+    local result = originalAdd(self, element)
+    self:RefreshLayout()
+    return result
+end
 
 ap.UIElements.ContainerFrameCanvas=ah("Frame",{
 Size=UDim2.new(1,0,1,0),
