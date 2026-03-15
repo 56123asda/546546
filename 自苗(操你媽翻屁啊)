@@ -1,0 +1,375 @@
+-- =====================================================
+-- 小傑腳本 - 獨立自瞄功能
+-- =====================================================
+-- 功能：自動瞄準在傳送標籤頁選擇的玩家
+-- 快捷鍵：N 開啟/關閉菜單
+-- =====================================================
+
+local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- 等待角色加載
+while not LocalPlayer do
+    Players.PlayerAdded:Wait()
+    LocalPlayer = Players.LocalPlayer
+end
+
+-- 初始化相機
+local Camera = workspace.CurrentCamera
+
+-- 發送歡迎通知
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "小傑腳本 - 自瞄功能",
+        Text = string.format("歡迎 %s，正在加載...", LocalPlayer.Name),
+        Duration = 3,
+    })
+end)
+
+warn("自瞄腳本已啟動")
+
+-- 加載 WindUI
+local WindUI
+local function LoadUI()
+    local urls = {
+        "https://raw.githubusercontent.com/Footagesus/WindUI/main/main.lua",
+        "https://cdn.jsdelivr.net/gh/Footagesus/WindUI@main/main.lua",
+        "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua",
+        "https://raw.githubusercontent.com/Footagesus/WindUI/main/Main.lua"
+    }
+    
+    for _, url in ipairs(urls) do
+        local success, result = pcall(function()
+            return loadstring(game:HttpGet(url))()
+        end)
+        
+        if success and result then
+            return result
+        end
+    end
+    return nil
+end
+
+WindUI = LoadUI()
+
+if not WindUI then
+    -- 如果還是失敗，嘗試最後一個穩定的 raw 連結
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/main.lua"))()
+    end)
+    if success and result then
+        WindUI = result
+    else
+        StarterGui:SetCore("SendNotification",{
+            Title = "嚴重錯誤",
+            Text = "UI 加載失敗，請檢查網絡",
+            Duration = 10;
+        })
+        return
+    end
+end
+
+-- 設置主題
+WindUI:SetTheme("Light")
+
+-- 基本通知
+WindUI:Notify({
+    Title = "小傑腳本 - 自瞄",
+    Content = "加載中",
+    Duration = 3,
+})
+
+task.wait(1)
+
+-- =====================================================
+-- 玩家列表管理
+-- =====================================================
+
+local playerList = {}  -- 儲存玩家名稱列表
+local playerMap = {}   -- 儲存玩家名稱對應的物件
+local selectedPlayer = nil
+local playerDropdown = nil
+
+-- 刷新玩家列表
+local function RefreshPlayerList()
+    WindUI:Notify({ 
+        Title = "玩家列表", 
+        Content = "正在重新載入...", 
+        Duration = 1 
+    })
+
+    local newPlayerList = {}
+    local newPlayerMap = {}
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(newPlayerList, player.Name)
+            newPlayerMap[player.Name] = player
+        end
+    end
+
+    playerList = newPlayerList
+    playerMap = newPlayerMap
+
+    -- 刷新下拉選單
+    if playerDropdown then
+        if #playerList > 0 then
+            playerDropdown:Refresh(playerList)
+            pcall(function()
+                playerDropdown:SetValue("請選擇玩家")
+            end)
+        else
+            playerDropdown:Refresh({"目前沒有其他玩家"})
+            pcall(function()
+                playerDropdown:SetValue("目前沒有其他玩家")
+            end)
+        end
+    end
+
+    WindUI:Notify({ 
+        Title = "玩家列表", 
+        Content = #playerList > 0 and 
+            ("重新載入成功，找到 " .. #playerList .. " 位玩家") 
+            or "目前沒有其他玩家在線", 
+        Duration = 2 
+    })
+end
+
+-- 初始化玩家列表
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        table.insert(playerList, player.Name)
+        playerMap[player.Name] = player
+    end
+end
+
+-- =====================================================
+-- 自瞄核心功能
+-- =====================================================
+
+local SimpleAimbot = {
+    Enabled = false,           -- 功能開關
+}
+
+-- 檢查目標是否存活
+local function IsTargetAlive(character)
+    if not character then return false end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    return humanoid and humanoid.Health > 0
+end
+
+-- 自瞄主循環
+RunService.RenderStepped:Connect(function()
+    if not SimpleAimbot.Enabled then return end
+    
+    -- 檢查是否有選中的玩家
+    if not selectedPlayer then
+        SimpleAimbot.Enabled = false
+        WindUI:Notify({
+            Title = "自瞄功能",
+            Content = "請先選擇目標玩家",
+            Duration = 2,
+            Icon = "alert-triangle"
+        })
+        return
+    end
+    
+    -- 檢查目標是否有效
+    local character = selectedPlayer.Character
+    if not character then return end
+    
+    if not IsTargetAlive(character) then return end
+    
+    -- 瞄準頭部
+    local targetPart = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
+    if not targetPart then return end
+    
+    -- 獲取當前相機方向
+    local currentCFrame = Camera.CFrame
+    local targetCFrame = CFrame.new(currentCFrame.Position, targetPart.Position)
+    
+    -- 平滑移動
+    local smoothness = 0.3
+    Camera.CFrame = currentCFrame:Lerp(targetCFrame, smoothness)
+end)
+
+-- 切換自瞄開關
+local function ToggleSimpleAimbot()
+    SimpleAimbot.Enabled = not SimpleAimbot.Enabled
+    
+    if SimpleAimbot.Enabled then
+        -- 檢查是否有選中的玩家
+        if not selectedPlayer then
+            SimpleAimbot.Enabled = false
+            WindUI:Notify({
+                Title = "自瞄功能",
+                Content = "請先選擇目標玩家",
+                Duration = 2,
+                Icon = "alert-triangle"
+            })
+            return
+        end
+        
+        WindUI:Notify({
+            Title = "自瞄功能",
+            Content = "已鎖定: " .. selectedPlayer.Name,
+            Duration = 2,
+            Icon = "target"
+        })
+    else
+        WindUI:Notify({
+            Title = "自瞄功能",
+            Content = "已關閉",
+            Duration = 1,
+            Icon = "target"
+        })
+    end
+end
+
+-- 當角色重生時關閉自瞄
+LocalPlayer.CharacterAdded:Connect(function()
+    SimpleAimbot.Enabled = false
+end)
+
+-- 當目標離開時自動關閉
+Players.PlayerRemoving:Connect(function(player)
+    if SimpleAimbot.Enabled and selectedPlayer and player == selectedPlayer then
+        SimpleAimbot.Enabled = false
+        WindUI:Notify({
+            Title = "自瞄功能",
+            Content = "目標已離開，自動關閉",
+            Duration = 2,
+            Icon = "info"
+        })
+        selectedPlayer = nil
+    end
+end)
+
+-- =====================================================
+-- 創建 UI 窗口
+-- =====================================================
+
+local Window = WindUI:CreateWindow({
+    Title = "小傑腳本 - 自瞄功能",
+    Icon = "rbxassetid://6031280882",
+    Author = "小傑",
+    Folder = "WindUI",
+    Size = UDim2.fromOffset(400, 300),
+    Transparent = false,
+    Theme = "Light",
+    ScrollBarEnabled = true,
+})
+
+-- N 鍵開關 UI
+Window:SetToggleKey(Enum.KeyCode.N)
+
+-- 創建標籤頁
+local MainTab = Window:Tab({ Title = "自瞄設定", Icon = "target" })
+
+-- =====================================================
+-- 玩家選擇區域
+-- =====================================================
+
+-- 刷新按鈕
+MainTab:Button({
+    Title = "🔄 重新載入玩家列表",
+    Callback = RefreshPlayerList
+})
+
+-- 玩家選擇下拉選單
+if #playerList > 0 then
+    playerDropdown = MainTab:Dropdown({
+        Title = "選擇目標玩家",
+        Values = playerList,
+        Value = "請選擇玩家",
+        Callback = function(selected)
+            if selected ~= "請選擇玩家" and selected ~= "目前沒有其他玩家" then
+                selectedPlayer = playerMap[selected]
+                
+                -- 如果自瞄開啟時切換目標，提示用戶
+                if SimpleAimbot.Enabled then
+                    WindUI:Notify({ 
+                        Title = "提示", 
+                        Content = "已切換目標至: " .. selected,
+                        Duration = 2 
+                    })
+                end
+            else
+                selectedPlayer = nil
+            end
+        end
+    })
+else
+    playerDropdown = MainTab:Dropdown({
+        Title = "選擇目標玩家",
+        Values = {"目前沒有其他玩家"},
+        Value = "目前沒有其他玩家",
+        Callback = function(selected)
+            selectedPlayer = nil
+        end
+    })
+end
+
+MainTab:Divider()
+
+-- =====================================================
+-- 自瞄開關區域
+-- =====================================================
+
+-- 自瞄開關
+MainTab:Toggle({
+    Title = "鎖定目標開關",
+    Value = false,
+    Callback = function(state)
+        ToggleSimpleAimbot()
+    end
+})
+
+-- 顯示當前目標
+MainTab:Paragraph({
+    Title = "當前目標",
+    Desc = function()
+        if selectedPlayer then
+            return selectedPlayer.Name
+        else
+            return "尚未選擇"
+        end
+    end,
+    Image = "info",
+})
+
+MainTab:Divider()
+
+-- 簡單說明
+MainTab:Paragraph({
+    Title = "使用說明",
+    Desc = "1. 從上方下拉選單選擇目標\n2. 開啟鎖定開關\n3. 視角會自動對準目標",
+    Image = "info",
+})
+
+-- 關閉事件
+Window:OnClose(function()
+    WindUI:Notify({
+        Title = "自瞄功能",
+        Content = "界面已關閉\n按 N 重新打開",
+        Duration = 3,
+    })
+end)
+
+-- =====================================================
+-- 初始化完成
+-- =====================================================
+
+WindUI:Notify({
+    Title = "小傑腳本 - 自瞄",
+    Content = "加載完成",
+    Duration = 3,
+})
+
+print("✅ 獨立自瞄腳本加載完成！")
+print("   按 N 鍵開啟/關閉菜單")
+print("   從下拉選單選擇目標")
+print("   開啟開關即可自動鎖定")
