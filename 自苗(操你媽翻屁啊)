@@ -1,5 +1,5 @@
 -- =====================================================
--- 小傑腳本 - 獨立自瞄功能
+-- 小傑腳本 - 獨立自瞄功能 (按鈕版)
 -- =====================================================
 -- 功能：自動瞄準在傳送標籤頁選擇的玩家
 -- 快捷鍵：N 開啟/關閉菜單
@@ -92,6 +92,7 @@ local playerList = {}  -- 儲存玩家名稱列表
 local playerMap = {}   -- 儲存玩家名稱對應的物件
 local selectedPlayer = nil
 local playerDropdown = nil
+local aimbotButton = nil  -- 自瞄按鈕
 
 -- 刷新玩家列表
 local function RefreshPlayerList()
@@ -168,6 +169,9 @@ RunService.RenderStepped:Connect(function()
     -- 檢查是否有選中的玩家
     if not selectedPlayer then
         SimpleAimbot.Enabled = false
+        if aimbotButton then
+            aimbotButton:SetTitle("開啟自瞄")
+        end
         WindUI:Notify({
             Title = "自瞄功能",
             Content = "請先選擇目標玩家",
@@ -213,6 +217,11 @@ local function ToggleSimpleAimbot()
             return
         end
         
+        -- 更新按鈕文字
+        if aimbotButton then
+            aimbotButton:SetTitle("關閉自瞄")
+        end
+        
         WindUI:Notify({
             Title = "自瞄功能",
             Content = "已鎖定: " .. selectedPlayer.Name,
@@ -220,6 +229,11 @@ local function ToggleSimpleAimbot()
             Icon = "target"
         })
     else
+        -- 更新按鈕文字
+        if aimbotButton then
+            aimbotButton:SetTitle("開啟自瞄")
+        end
+        
         WindUI:Notify({
             Title = "自瞄功能",
             Content = "已關閉",
@@ -231,13 +245,21 @@ end
 
 -- 當角色重生時關閉自瞄
 LocalPlayer.CharacterAdded:Connect(function()
-    SimpleAimbot.Enabled = false
+    if SimpleAimbot.Enabled then
+        SimpleAimbot.Enabled = false
+        if aimbotButton then
+            aimbotButton:SetTitle("開啟自瞄")
+        end
+    end
 end)
 
 -- 當目標離開時自動關閉
 Players.PlayerRemoving:Connect(function(player)
     if SimpleAimbot.Enabled and selectedPlayer and player == selectedPlayer then
         SimpleAimbot.Enabled = false
+        if aimbotButton then
+            aimbotButton:SetTitle("開啟自瞄")
+        end
         WindUI:Notify({
             Title = "自瞄功能",
             Content = "目標已離開，自動關閉",
@@ -257,7 +279,7 @@ local Window = WindUI:CreateWindow({
     Icon = "rbxassetid://6031280882",
     Author = "小傑",
     Folder = "WindUI",
-    Size = UDim2.fromOffset(400, 300),
+    Size = UDim2.fromOffset(400, 320),
     Transparent = false,
     Theme = "Light",
     ScrollBarEnabled = true,
@@ -299,6 +321,20 @@ if #playerList > 0 then
                 end
             else
                 selectedPlayer = nil
+                
+                -- 如果自瞄開啟時取消選擇，自動關閉
+                if SimpleAimbot.Enabled then
+                    SimpleAimbot.Enabled = false
+                    if aimbotButton then
+                        aimbotButton:SetTitle("開啟自瞄")
+                    end
+                    WindUI:Notify({
+                        Title = "自瞄功能",
+                        Content = "目標已取消，自動關閉",
+                        Duration = 2,
+                        Icon = "info"
+                    })
+                end
             end
         end
     })
@@ -316,14 +352,13 @@ end
 MainTab:Divider()
 
 -- =====================================================
--- 自瞄開關區域
+-- 自瞄按鈕區域
 -- =====================================================
 
--- 自瞄開關
-MainTab:Toggle({
-    Title = "鎖定目標開關",
-    Value = false,
-    Callback = function(state)
+-- 自瞄按鈕（取代原來的 Toggle）
+aimbotButton = MainTab:Button({
+    Title = "開啟自瞄",
+    Callback = function()
         ToggleSimpleAimbot()
     end
 })
@@ -341,12 +376,25 @@ MainTab:Paragraph({
     Image = "info",
 })
 
+-- 顯示目前狀態
+MainTab:Paragraph({
+    Title = "目前狀態",
+    Desc = function()
+        if SimpleAimbot.Enabled then
+            return "🔴 自瞄開啟中"
+        else
+            return "⚫ 自瞄關閉中"
+        end
+    end,
+    Image = "info",
+})
+
 MainTab:Divider()
 
 -- 簡單說明
 MainTab:Paragraph({
     Title = "使用說明",
-    Desc = "1. 從上方下拉選單選擇目標\n2. 開啟鎖定開關\n3. 視角會自動對準目標",
+    Desc = "1. 從上方下拉選單選擇目標\n2. 點擊【開啟自瞄】按鈕\n3. 視角會自動對準目標\n4. 再次點擊按鈕即可關閉",
     Image = "info",
 })
 
@@ -369,7 +417,8 @@ WindUI:Notify({
     Duration = 3,
 })
 
-print("✅ 獨立自瞄腳本加載完成！")
+print("✅ 獨立自瞄腳本（按鈕版）加載完成！")
 print("   按 N 鍵開啟/關閉菜單")
 print("   從下拉選單選擇目標")
-print("   開啟開關即可自動鎖定")
+print("   點擊【開啟自瞄】按鈕開始鎖定")
+print("   再次點擊按鈕即可關閉")
