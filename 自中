@@ -56,48 +56,79 @@ local function getClosestPlayer()
     return closest 
 end 
 
--- [[ 2. 修正版 Hook ]] 
-spawn(function() 
-    local ok, hookMeta = pcall(getrawmetatable, game) 
-    if ok and hookMeta then 
-        setreadonly(hookMeta, false) 
-        local OldHook 
-        OldHook = hookmetamethod(game, "__namecall", function(self, ...) 
-            local method = getnamecallmethod() 
-            local args = {...} 
+-- [[ 2. 安全修正版 Hook ]] 
+-- 採用「三重保護」機制，徹底解決 UI 消失問題，同時支持所有前衝與座標技能
+local function ApplySilentAimHook()
+    local ok, Mouse = pcall(function() return player:GetMouse() end)
+    if not ok or not Mouse then return end
+
+    local ok2, mt = pcall(getrawmetatable, game)
+    if ok2 and mt then
+        local oldIndex = mt.__index
+        local oldNamecall = mt.__namecall
+        setreadonly(mt, false)
+        
+        -- 保護名單：絕對不攔截這些名稱的 Remote，防止 UI 消失
+        local UI_Blacklist = {"HUDUpdate", "InventoryUpdate", "GetInventory", "equip", "unequip", "UpdatePlayerGui", "SetCore"}
+
+        -- [第一重：滑鼠屬性 Hook] 最穩定，不影響網路與 UI
+        mt.__index = newcclosure(function(self, key)
+            if not checkcaller() and SilentAimPlayersEnabled and PlayersPosition then
+                if self == Mouse and (key == "Hit" or key == "Target") then
+                    if key == "Hit" then return CFrame.new(PlayersPosition)
+                    elseif key == "Target" then
+                        local target = getClosestTarget()
+                        return target and getHRP(target.Character) or oldIndex(self, key)
+                    end
+                end
+            end
+            return oldIndex(self, key)
+        end)
+        
+        -- [第二重：Surgical Namecall Hook] 僅針對戰鬥 Remote，且排除 UI 名單
+        mt.__namecall = newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            local args = {...}
             
-            if SilentAimPlayersEnabled and PlayersPosition and not checkcaller() then 
-                if method == "FireServer" or method == "InvokeServer" then 
+            if not checkcaller() and SilentAimPlayersEnabled and PlayersPosition then
+                if method == "FireServer" or method == "InvokeServer" then
                     local name = self.Name
-                    -- 關鍵修正：限制會被攔截的 Remote 名稱，防止誤傷 UI 系統
-                    -- 這些是 Blox Fruits 中已知的戰鬥/技能相關 Remote
-                    local isCombatRemote = (name == "CommE" or name == "RegisterHit" or name == "RegisterAttack" or name == "RemoteEvent" or name == "CommF_")
+                    
+                    -- 檢查是否在黑名單中
+                    for _, blacklisted in ipairs(UI_Blacklist) do
+                        if name:find(blacklisted) then return oldNamecall(self, ...) end
+                    end
+
+                    -- 白名單：僅攔截特定的戰鬥/技能 Remote
+                    -- 加上 self.Parent 檢查，通常戰鬥 Remote 都在 "Remotes" 文件夾
+                    local isCombatRemote = (name == "CommE" or name == "RegisterHit" or name == "RegisterAttack") 
                     
                     if isCombatRemote then
-                        -- 針對前衝技能與座標類技能
-                        if typeof(args[1]) == "Vector3" then 
-                            args[1] = PlayersPosition 
-                            return OldHook(self, unpack(args)) 
-                        elseif type(args[1]) == "string" and (table.find(Skills, args[1]:upper()) or table.find(Booms, args[1])) then 
-                            if #args >= 2 then 
-                                -- 有些技能座標在第 2 或第 3 個參數
-                                for i = 2, #args do
-                                    if typeof(args[i]) == "Vector3" then
-                                        args[i] = PlayersPosition
-                                        break
-                                    end
+                        -- 針對前衝與座標技能
+                        if typeof(args[1]) == "Vector3" then
+                            args[1] = PlayersPosition
+                            return oldNamecall(self, unpack(args))
+                        elseif type(args[1]) == "string" and (table.find(Skills, args[1]:upper()) or table.find(Booms, args[1])) then
+                            for i = 2, #args do
+                                if typeof(args[i]) == "Vector3" then
+                                    args[i] = PlayersPosition
+                                    break
                                 end
-                            end 
-                            return OldHook(self, unpack(args)) 
-                        end 
+                            end
+                            return oldNamecall(self, unpack(args))
+                        end
                     end
-                end 
-            end 
-            return OldHook(self, ...) 
-        end) 
-        setreadonly(hookMeta, true) 
-    end 
-end) 
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+        
+        setreadonly(mt, true)
+    end
+end
+
+-- 執行 Hook
+ApplySilentAimHook()
 
 -- [[ 3. 渲染與追蹤迴圈 ]] 
 local MouseModule = RS:FindFirstChild("Mouse") 
@@ -111,7 +142,7 @@ RunService.Heartbeat:Connect(function()
     if target and target.Character then 
         PlayersPosition = getPredictedPosition(target.Character) 
         
-        -- 修改遊戲內部 Mouse 模組 (Blox Fruits 特定)
+        -- [第三重：Mouse 模組 Hook] 處理依賴內部模組的果實技能
         if MouseModule then 
             local ok, m = pcall(require, MouseModule) 
             if ok and type(m) == "table" then 
