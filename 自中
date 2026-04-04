@@ -1,4 +1,4 @@
--- [[ 小傑獨立靜默自瞄腳本 V2 - 安全修復版 ]] 
+-- [[ 小傑獨立靜默自瞄腳本 - 安全修復版 ]] 
 -- 說明：此腳本為獨立運作，已修正會導致遊戲 UI 消失的問題。
 
 local Players = game:GetService("Players") 
@@ -6,20 +6,17 @@ local player = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")  
 local RunService = game:GetService("RunService") 
 local RS = game:GetService("ReplicatedStorage") 
-local Camera = workspace.CurrentCamera
 
 -- [[ 配置變數 ]] 
-local SilentAimEnabled = false 
+local SilentAimPlayersEnabled = false 
 local PredictionEnabled = true 
 local PredictionAmount = 0.12 
-local MaxRange = 1000 
-local TargetPart = "HumanoidRootPart"
-local ShowFOV = true
-local FOVRadius = 150
+local maxRange = 1000 
+local PlayersPosition = nil 
 
--- 技能與攻擊過濾清單 (Blox Fruits 特定)
-local CombatRemotes = {"CommE", "RegisterHit", "RegisterAttack", "CommF_"}
-local CombatMethods = {"FireServer", "InvokeServer"}
+-- 技能過濾清單 
+local Skills = {"Z", "X", "C", "V"} 
+local Booms = {"TAP", "MainClick"} 
 
 -- [[ 1. 核心邏輯 ]] 
 local function getHRP(model) 
@@ -38,8 +35,7 @@ end
 
 local function getClosestPlayer() 
     local closest = nil 
-    local shortestDist = MaxRange 
-    local mousePos = UserInputService:GetMouseLocation()
+    local dist = maxRange 
     local lpHRP = getHRP(player.Character) 
     if not lpHRP then return nil end 
 
@@ -48,14 +44,11 @@ local function getClosestPlayer()
             if p.Character.Humanoid.Health > 0 then 
                 local targetHRP = getHRP(p.Character) 
                 if targetHRP then 
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetHRP.Position)
-                    if onScreen then
-                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                        if dist < FOVRadius and dist < shortestDist then 
-                            shortestDist = dist 
-                            closest = p 
-                        end 
-                    end
+                    local d = (targetHRP.Position - lpHRP.Position).Magnitude 
+                    if d < dist then 
+                        dist = d 
+                        closest = p 
+                    end 
                 end 
             end 
         end 
@@ -63,65 +56,64 @@ local function getClosestPlayer()
     return closest 
 end 
 
--- [[ 2. 安全版 Hook ]] 
--- 僅攔截戰鬥相關的 Remote，不影響遊戲 UI 與系統操作
-local ok, mt = pcall(getrawmetatable, game) 
-if ok and mt then 
-    local oldNamecall = mt.__namecall
-    setreadonly(mt, false) 
-    
-    mt.__namecall = newcclosure(function(self, ...) 
-        local method = getnamecallmethod() 
-        local args = {...} 
-        
-        if SilentAimEnabled and not checkcaller() then
-            if table.find(CombatMethods, method) and table.find(CombatRemotes, self.Name) then
-                local target = getClosestPlayer()
-                if target and target.Character then
-                    local pos = getPredictedPosition(target.Character)
-                    if pos then
-                        -- 修正參數中的座標資訊
-                        for i, arg in ipairs(args) do
-                            if typeof(arg) == "Vector3" then
-                                args[i] = pos
-                            elseif typeof(arg) == "CFrame" then
-                                args[i] = CFrame.new(pos)
-                            end
-                        end
-                        return oldNamecall(self, unpack(args))
-                    end
-                end
-            end
-        end 
-        return oldNamecall(self, ...) 
-    end) 
-    setreadonly(mt, true) 
-end 
+-- [[ 2. 安全修正版 Hook ]] 
+-- 修復重點：加入 Remote 名稱過濾，防止攔截遊戲 UI 與系統相關的請求
+spawn(function() 
+    local ok, hookMeta = pcall(getrawmetatable, game) 
+    if ok and hookMeta then 
+        setreadonly(hookMeta, false) 
+        local OldHook 
+        OldHook = hookmetamethod(game, "__namecall", function(self, ...) 
+            local method = getnamecallmethod() 
+            local args = {...} 
+            
+            if SilentAimPlayersEnabled and PlayersPosition and not checkcaller() then 
+                -- 僅針對特定的戰鬥遠端事件進行修正，防止影響遊戲介面
+                local name = self.Name
+                local isCombat = (name == "CommE" or name == "RegisterHit" or name == "RegisterAttack")
 
--- [[ 3. FOV 視覺化 ]]
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1.5
-FOVCircle.Transparency = 0.8
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-FOVCircle.Filled = false
+                if isCombat and (method == "FireServer" or method == "InvokeServer") then 
+                    if typeof(args[1]) == "Vector3" then 
+                        args[1] = PlayersPosition 
+                        return OldHook(self, unpack(args)) 
+                    elseif type(args[1]) == "string" and (table.find(Skills, args[1]:upper()) or table.find(Booms, args[1])) then 
+                        if #args >= 2 then 
+                            args[2] = PlayersPosition 
+                        end 
+                        return OldHook(self, unpack(args)) 
+                    end 
+                end 
+            end 
+            return OldHook(self, ...) 
+        end) 
+        setreadonly(hookMeta, true) 
+    end 
+end) 
 
-RunService.RenderStepped:Connect(function()
-    FOVCircle.Visible = SilentAimEnabled and ShowFOV
-    if FOVCircle.Visible then
-        FOVCircle.Position = UserInputService:GetMouseLocation()
-        FOVCircle.Radius = FOVRadius
-    end
-end)
+-- [[ 3. 渲染與追蹤迴圈 ]] 
+RunService.Heartbeat:Connect(function() 
+    if not SilentAimPlayersEnabled then 
+        PlayersPosition = nil 
+        return 
+    end 
+
+    local target = getClosestPlayer() 
+    if target and target.Character then 
+        PlayersPosition = getPredictedPosition(target.Character) 
+    else 
+        PlayersPosition = nil 
+    end 
+end) 
 
 -- [[ 4. UI 介面設定 ]] 
 local ScreenGui = Instance.new("ScreenGui") 
-ScreenGui.Name = "XiaoJieIndependentAimbot"
+ScreenGui.Name = "XiaoJieAimbot" 
 ScreenGui.ResetOnSpawn = false 
 ScreenGui.Parent = player:WaitForChild("PlayerGui") 
  
 local MainFrame = Instance.new("Frame") 
-MainFrame.Size = UDim2.new(0, 220, 0, 160) 
-MainFrame.Position = UDim2.new(0.5, -110, 0.5, -80) 
+MainFrame.Size = UDim2.new(0, 220, 0, 130) 
+MainFrame.Position = UDim2.new(0.5, -110, 0.5, -65) 
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35) 
 MainFrame.BorderSizePixel = 2 
 MainFrame.Active = true 
@@ -131,37 +123,24 @@ MainFrame.Parent = ScreenGui
 local Title = Instance.new("TextLabel") 
 Title.Size = UDim2.new(1, 0, 0, 35) 
 Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20) 
-Title.Text = "小傑獨立自瞄 V2"
+Title.Text = "小傑腳本 V2" 
 Title.TextColor3 = Color3.new(1, 1, 1) 
 Title.Font = Enum.Font.GothamBold 
 Title.Parent = MainFrame 
  
 local Toggle = Instance.new("TextButton") 
 Toggle.Size = UDim2.new(0.8, 0, 0, 40) 
-Toggle.Position = UDim2.new(0.1, 0, 0.3, 0) 
+Toggle.Position = UDim2.new(0.1, 0, 0.45, 0) 
 Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60) 
 Toggle.Text = "自瞄狀態: OFF" 
 Toggle.TextColor3 = Color3.new(1, 1, 1) 
 Toggle.Parent = MainFrame 
  
 Toggle.MouseButton1Click:Connect(function() 
-    SilentAimEnabled = not SilentAimEnabled 
-    Toggle.Text = SilentAimEnabled and "自瞄狀態: ON" or "自瞄狀態: OFF" 
-    Toggle.BackgroundColor3 = SilentAimEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) 
+    SilentAimPlayersEnabled = not SilentAimPlayersEnabled 
+    Toggle.Text = SilentAimPlayersEnabled and "自瞄狀態: ON" or "自瞄狀態: OFF" 
+    Toggle.BackgroundColor3 = SilentAimPlayersEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) 
 end) 
-
-local FOVToggle = Instance.new("TextButton") 
-FOVToggle.Size = UDim2.new(0.8, 0, 0, 40) 
-FOVToggle.Position = UDim2.new(0.1, 0, 0.65, 0) 
-FOVToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60) 
-FOVToggle.Text = "顯示範圍: ON" 
-FOVToggle.TextColor3 = Color3.new(1, 1, 1) 
-FOVToggle.Parent = MainFrame 
-
-FOVToggle.MouseButton1Click:Connect(function() 
-    ShowFOV = not ShowFOV 
-    FOVToggle.Text = ShowFOV and "顯示範圍: ON" or "顯示範圍: OFF" 
-end)
  
 UserInputService.InputBegan:Connect(function(input, gpe) 
     if not gpe and input.KeyCode == Enum.KeyCode.Insert then 
@@ -169,4 +148,4 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end 
 end) 
  
-print("小傑獨立自瞄腳本 載入完成！按 Insert 鍵隱藏/顯示選單。")
+print("小傑腳本 修正完成！按 Insert 鍵隱藏/顯示選單。")
