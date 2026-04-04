@@ -6,6 +6,7 @@ local player = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")  
 local RunService = game:GetService("RunService") 
 local RS = game:GetService("ReplicatedStorage") 
+local MouseModule = RS:FindFirstChild("Mouse") 
 
 -- [[ 配置變數 ]] 
 local SilentAimPlayersEnabled = false 
@@ -57,7 +58,7 @@ local function getClosestPlayer()
 end 
 
 -- [[ 2. 安全修正版 Hook ]] 
--- 修復重點：加入 Remote 名稱過濾，防止攔截遊戲 UI 與系統相關的請求
+-- 修復重點：精確過濾戰鬥相關 Remote，避免攔截 UI 系統的座標請求
 spawn(function() 
     local ok, hookMeta = pcall(getrawmetatable, game) 
     if ok and hookMeta then 
@@ -68,10 +69,10 @@ spawn(function()
             local args = {...} 
             
             if SilentAimPlayersEnabled and PlayersPosition and not checkcaller() then 
-                -- 僅針對特定的戰鬥遠端事件進行修正，防止影響遊戲介面
                 local name = self.Name
-                local isCombat = (name == "CommE" or name == "RegisterHit" or name == "RegisterAttack")
-
+                -- 判斷是否為戰鬥相關 Remote (CommE, RegisterHit, RegisterAttack, CommF_)
+                local isCombat = (name == "CommE" or name == "RegisterHit" or name == "RegisterAttack" or name == "CommF_")
+                
                 if isCombat and (method == "FireServer" or method == "InvokeServer") then 
                     if typeof(args[1]) == "Vector3" then 
                         args[1] = PlayersPosition 
@@ -100,6 +101,14 @@ RunService.Heartbeat:Connect(function()
     local target = getClosestPlayer() 
     if target and target.Character then 
         PlayersPosition = getPredictedPosition(target.Character) 
+        
+        -- 核心修復：還原 MouseModule 注入邏輯，這對於大多數技能生效至關重要
+        if MouseModule then 
+            local ok, m = pcall(require, MouseModule) 
+            if ok and type(m) == "table" then 
+                m.Hit = CFrame.new(PlayersPosition) 
+            end 
+        end 
     else 
         PlayersPosition = nil 
     end 
