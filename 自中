@@ -1,22 +1,16 @@
 -- [[ 核心模組設定 ]] 
-local SilentAimModule = {} 
 local Players = game:GetService("Players") 
 local player = Players.LocalPlayer 
 local UserInputService = game:GetService("UserInputService")  
 local RunService = game:GetService("RunService") 
-local RS = game:GetService("ReplicatedStorage") 
 local Camera = workspace.CurrentCamera
 
 -- 全域變數 
-local SilentAimPlayersEnabled = false 
+local SilentAimEnabled = false 
 local PredictionEnabled = true 
 local PredictionAmount = 0.12 
 local maxRange = 1000 
-local PlayersPosition = nil 
- 
--- 技能過濾清單 
-local Skills = {"Z", "X", "C", "V"} 
-local Booms = {"TAP", "MainClick"} 
+local TargetPosition = nil 
  
 -- [[ 1. 核心鎖定邏輯 ]] 
 local function getHRP(model) 
@@ -56,69 +50,57 @@ local function getClosestPlayer()
     return closest 
 end 
  
--- [[ 2. 安全版 Hook (修復 UI 消失問題) ]] 
-pcall(function() 
-    local mt = getrawmetatable(game) 
-    local oldNamecall = mt.__namecall
-    local oldIndex = mt.__index
-    setreadonly(mt, false) 
-    
-    -- 修改 __namecall：精確攔截戰鬥指令
-    mt.__namecall = newcclosure(function(self, ...) 
-        local method = getnamecallmethod() 
-        local args = {...} 
-        
-        if not checkcaller() and SilentAimPlayersEnabled and PlayersPosition then 
-            -- 僅針對 Blox Fruits 戰鬥 Remote "CommE" 進行攔截
-            if (method == "FireServer" or method == "InvokeServer") and self.Name == "CommE" then 
-                if type(args[1]) == "string" then
-                    local cmd = args[1]:upper()
-                    if table.find(Skills, cmd) or table.find(Booms, args[1]) then
-                        if #args >= 2 and typeof(args[2]) == "Vector3" then
-                            args[2] = PlayersPosition
-                            return oldNamecall(self, unpack(args))
-                        end
-                    end
-                end
-            end 
-        end 
-        return oldNamecall(self, ...) 
-    end) 
+-- [[ 2. 極簡安全版 Hook (解決特效消失與 UI 衝突) ]] 
+local function IsMouseOverUI()
+    local mousePos = UserInputService:GetMouseLocation()
+    local objects = player.PlayerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
+    for _, obj in ipairs(objects) do
+        if obj.Visible and obj.Active then
+            return true
+        end
+    end
+    return false
+end
 
-    -- 修改 __index：安全修改滑鼠位置 (取代損壞的 MouseModule)
-    mt.__index = newcclosure(function(t, k)
-        if not checkcaller() and SilentAimPlayersEnabled and PlayersPosition and typeof(t) == "Instance" and t:IsA("Mouse") then
+local mt = getrawmetatable(game)
+local oldIndex = mt.__index
+setreadonly(mt, false)
+
+mt.__index = newcclosure(function(t, k)
+    -- 僅在非腳本調用、自瞄開啟、有目標、且滑鼠不在 UI 上時執行
+    if not checkcaller() and SilentAimEnabled and TargetPosition and not IsMouseOverUI() then
+        if typeof(t) == "Instance" and t:IsA("Mouse") then
             if k == "Hit" then
-                return CFrame.new(PlayersPosition)
+                return CFrame.new(TargetPosition)
             elseif k == "Target" then
                 local target = getClosestPlayer()
                 return target and getHRP(target.Character)
             end
         end
-        return oldIndex(t, k)
-    end)
-    
-    setreadonly(mt, true) 
-end) 
+    end
+    return oldIndex(t, k)
+end)
+
+setreadonly(mt, true)
  
--- [[ 3. 渲染與追蹤迴圈 ]] 
+-- [[ 3. 追蹤迴圈 ]] 
 RunService.Heartbeat:Connect(function() 
-    if not SilentAimPlayersEnabled then 
-        PlayersPosition = nil 
+    if not SilentAimEnabled then 
+        TargetPosition = nil 
         return 
     end 
  
     local target = getClosestPlayer() 
     if target and target.Character then 
-        PlayersPosition = getPredictedPosition(target.Character) 
+        TargetPosition = getPredictedPosition(target.Character) 
     else 
-        PlayersPosition = nil 
+        TargetPosition = nil 
     end 
 end) 
  
--- [[ 4. UI 介面設定 (按 Insert 隱藏) ]] 
+-- [[ 4. UI 介面 (保持您的原始風格) ]] 
 local ScreenGui = Instance.new("ScreenGui") 
-ScreenGui.Name = "XiaoJieAimbot_V2_Fixed" 
+ScreenGui.Name = "XiaoJieAimbot_V2_Stable" 
 ScreenGui.ResetOnSpawn = false 
 ScreenGui.Parent = player:WaitForChild("PlayerGui") 
  
@@ -134,7 +116,7 @@ MainFrame.Parent = ScreenGui
 local Title = Instance.new("TextLabel") 
 Title.Size = UDim2.new(1, 0, 0, 35) 
 Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20) 
-Title.Text = "小傑腳本 V2 (修正版)" 
+Title.Text = "小傑腳本 V2 超穩定版" 
 Title.TextColor3 = Color3.new(1, 1, 1) 
 Title.Font = Enum.Font.GothamBold 
 Title.Parent = MainFrame 
@@ -148,9 +130,9 @@ Toggle.TextColor3 = Color3.new(1, 1, 1)
 Toggle.Parent = MainFrame 
  
 Toggle.MouseButton1Click:Connect(function() 
-    SilentAimPlayersEnabled = not SilentAimPlayersEnabled 
-    Toggle.Text = SilentAimPlayersEnabled and "自瞄狀態: ON" or "自瞄狀態: OFF" 
-    Toggle.BackgroundColor3 = SilentAimPlayersEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) 
+    SilentAimEnabled = not SilentAimEnabled 
+    Toggle.Text = SilentAimEnabled and "自瞄狀態: ON" or "自瞄狀態: OFF" 
+    Toggle.BackgroundColor3 = SilentAimEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) 
 end) 
  
 UserInputService.InputBegan:Connect(function(input, gpe) 
@@ -159,4 +141,4 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end 
 end) 
  
-print("小傑腳本 V2 修正版已載入！按 Insert 鍵隱藏/顯示。")
+print("小傑腳本 V2 超穩定版已載入！")
