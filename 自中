@@ -66,19 +66,31 @@ spawn(function()
             local method = getnamecallmethod() 
             local args = {...} 
             
-            if SilentAimPlayersEnabled and PlayersPosition then 
-                -- 核心邏輯：攔截所有 FireServer/InvokeServer，並修正其中的 Vector3 參數
+            if SilentAimPlayersEnabled and PlayersPosition and not checkcaller() then 
                 if method == "FireServer" or method == "InvokeServer" then 
-                    -- 針對前衝技能：許多前衝技能會發送目標座標作為參數
-                    if typeof(args[1]) == "Vector3" then 
-                        args[1] = PlayersPosition 
-                        return OldHook(self, unpack(args)) 
-                    elseif type(args[1]) == "string" and (table.find(Skills, args[1]:upper()) or table.find(Booms, args[1])) then 
-                        if #args >= 2 and typeof(args[2]) == "Vector3" then 
-                            args[2] = PlayersPosition 
+                    local name = self.Name
+                    -- 關鍵修正：限制會被攔截的 Remote 名稱，防止誤傷 UI 系統
+                    -- 這些是 Blox Fruits 中已知的戰鬥/技能相關 Remote
+                    local isCombatRemote = (name == "CommE" or name == "RegisterHit" or name == "RegisterAttack" or name == "RemoteEvent" or name == "CommF_")
+                    
+                    if isCombatRemote then
+                        -- 針對前衝技能與座標類技能
+                        if typeof(args[1]) == "Vector3" then 
+                            args[1] = PlayersPosition 
+                            return OldHook(self, unpack(args)) 
+                        elseif type(args[1]) == "string" and (table.find(Skills, args[1]:upper()) or table.find(Booms, args[1])) then 
+                            if #args >= 2 then 
+                                -- 有些技能座標在第 2 或第 3 個參數
+                                for i = 2, #args do
+                                    if typeof(args[i]) == "Vector3" then
+                                        args[i] = PlayersPosition
+                                        break
+                                    end
+                                end
+                            end 
+                            return OldHook(self, unpack(args)) 
                         end 
-                        return OldHook(self, unpack(args)) 
-                    end 
+                    end
                 end 
             end 
             return OldHook(self, ...) 
