@@ -1,19 +1,33 @@
--- [[ 核心設定 ]] 
+-- [[ 小傑獨立靜默自瞄腳本 V2 - 安全修復版 ]] 
+-- 說明：此腳本為獨立運作，已修正會導致遊戲 UI 消失的問題。
+
 local Players = game:GetService("Players") 
 local player = Players.LocalPlayer 
 local UserInputService = game:GetService("UserInputService")  
 local RunService = game:GetService("RunService") 
+local RS = game:GetService("ReplicatedStorage") 
+local Camera = workspace.CurrentCamera
 
--- 全域變數 
+-- [[ 配置變數 ]] 
 local SilentAimEnabled = false 
 local PredictionEnabled = true 
 local PredictionAmount = 0.12 
-local maxRange = 1000 
-local TargetPos = nil 
- 
--- [[ 1. 核心鎖定邏輯 ]] 
+local MaxRange = 1000 
+local TargetPart = "HumanoidRootPart"
+local ShowFOV = true
+local FOVRadius = 150
+
+-- 技能與攻擊過濾清單 (Blox Fruits 特定)
+local CombatRemotes = {"CommE", "RegisterHit", "RegisterAttack", "CommF_"}
+local CombatMethods = {"FireServer", "InvokeServer"}
+
+-- [[ 1. 核心邏輯 ]] 
+local function getHRP(model) 
+    return model and model:FindFirstChild("HumanoidRootPart") 
+end 
+
 local function getPredictedPosition(targetChar) 
-    local hrp = targetChar:FindFirstChild("HumanoidRootPart")
+    local hrp = getHRP(targetChar) 
     if not hrp then return nil end 
     local velocity = hrp.Velocity 
     if not PredictionEnabled or velocity.Magnitude < 2 then 
@@ -21,122 +35,138 @@ local function getPredictedPosition(targetChar)
     end 
     return hrp.Position + (velocity * PredictionAmount) 
 end 
- 
+
 local function getClosestPlayer() 
     local closest = nil 
-    local dist = maxRange 
-    local lpHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local shortestDist = MaxRange 
+    local mousePos = UserInputService:GetMouseLocation()
+    local lpHRP = getHRP(player.Character) 
     if not lpHRP then return nil end 
- 
+
     for _, p in ipairs(Players:GetPlayers()) do 
         if p ~= player and p.Character and p.Character:FindFirstChild("Humanoid") then 
             if p.Character.Humanoid.Health > 0 then 
-                local targetHRP = p.Character:FindFirstChild("HumanoidRootPart")
+                local targetHRP = getHRP(p.Character) 
                 if targetHRP then 
-                    local d = (targetHRP.Position - lpHRP.Position).Magnitude 
-                    if d < dist then 
-                        dist = d 
-                        closest = p 
-                    end 
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetHRP.Position)
+                    if onScreen then
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                        if dist < FOVRadius and dist < shortestDist then 
+                            shortestDist = dist 
+                            closest = p 
+                        end 
+                    end
                 end 
             end 
         end 
     end 
     return closest 
 end 
- 
--- [[ 2. 零衝突 Hook (解決 UI 消失與技能失效) ]] 
-local mt = getrawmetatable(game)
-local oldIndex = mt.__index
-setreadonly(mt, false)
 
-mt.__index = newcclosure(function(t, k)
-    -- 核心防護：只在開啟自瞄且有目標時運作
-    if not checkcaller() and SilentAimEnabled and TargetPos then
-        -- 關鍵修復：檢查調用來源
-        local callingScript = getcallingscript()
-        local scriptName = callingScript and callingScript.Name or ""
+-- [[ 2. 安全版 Hook ]] 
+-- 僅攔截戰鬥相關的 Remote，不影響遊戲 UI 與系統操作
+local ok, mt = pcall(getrawmetatable, game) 
+if ok and mt then 
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false) 
+    
+    mt.__namecall = newcclosure(function(self, ...) 
+        local method = getnamecallmethod() 
+        local args = {...} 
         
-        -- 僅允許戰鬥相關腳本獲取自瞄坐標，UI 腳本將獲取原始坐標
-        if scriptName == "CombatFramework" or scriptName == "Main" or scriptName == "Combat" then
-            if typeof(t) == "Instance" and t:IsA("Mouse") then
-                if k == "Hit" then
-                    return CFrame.new(TargetPos)
-                elseif k == "Target" then
-                    local target = getClosestPlayer()
-                    return target and target.Character:FindFirstChild("HumanoidRootPart")
+        if SilentAimEnabled and not checkcaller() then
+            if table.find(CombatMethods, method) and table.find(CombatRemotes, self.Name) then
+                local target = getClosestPlayer()
+                if target and target.Character then
+                    local pos = getPredictedPosition(target.Character)
+                    if pos then
+                        -- 修正參數中的座標資訊
+                        for i, arg in ipairs(args) do
+                            if typeof(arg) == "Vector3" then
+                                args[i] = pos
+                            elseif typeof(arg) == "CFrame" then
+                                args[i] = CFrame.new(pos)
+                            end
+                        end
+                        return oldNamecall(self, unpack(args))
+                    end
                 end
             end
-        end
+        end 
+        return oldNamecall(self, ...) 
+    end) 
+    setreadonly(mt, true) 
+end 
+
+-- [[ 3. FOV 視覺化 ]]
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1.5
+FOVCircle.Transparency = 0.8
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Filled = false
+
+RunService.RenderStepped:Connect(function()
+    FOVCircle.Visible = SilentAimEnabled and ShowFOV
+    if FOVCircle.Visible then
+        FOVCircle.Position = UserInputService:GetMouseLocation()
+        FOVCircle.Radius = FOVRadius
     end
-    return oldIndex(t, k)
 end)
 
-setreadonly(mt, true)
- 
--- [[ 3. 追蹤迴圈 ]] 
-RunService.Heartbeat:Connect(function() 
-    if not SilentAimEnabled then 
-        TargetPos = nil 
-        return 
-    end 
- 
-    local target = getClosestPlayer() 
-    if target and target.Character then 
-        TargetPos = getPredictedPosition(target.Character) 
-    else 
-        TargetPos = nil 
-    end 
-end) 
- 
--- [[ 4. 極簡 UI 介面 ]] 
+-- [[ 4. UI 介面設定 ]] 
 local ScreenGui = Instance.new("ScreenGui") 
-ScreenGui.Name = "XiaoJie_Fixed_V3" 
+ScreenGui.Name = "XiaoJieIndependentAimbot"
 ScreenGui.ResetOnSpawn = false 
 ScreenGui.Parent = player:WaitForChild("PlayerGui") 
  
 local MainFrame = Instance.new("Frame") 
-MainFrame.Size = UDim2.new(0, 220, 0, 130) 
-MainFrame.Position = UDim2.new(0.5, -110, 0.5, -65) 
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35) 
-MainFrame.BorderSizePixel = 0 
+MainFrame.Size = UDim2.new(0, 220, 0, 160) 
+MainFrame.Position = UDim2.new(0.5, -110, 0.5, -80) 
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35) 
+MainFrame.BorderSizePixel = 2 
 MainFrame.Active = true 
 MainFrame.Draggable = true 
 MainFrame.Parent = ScreenGui 
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 10)
-Corner.Parent = MainFrame
  
 local Title = Instance.new("TextLabel") 
 Title.Size = UDim2.new(1, 0, 0, 35) 
-Title.BackgroundTransparency = 1
-Title.Text = "小傑自瞄 V2 (修復版)" 
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20) 
+Title.Text = "小傑獨立自瞄 V2"
 Title.TextColor3 = Color3.new(1, 1, 1) 
 Title.Font = Enum.Font.GothamBold 
 Title.Parent = MainFrame 
  
 local Toggle = Instance.new("TextButton") 
 Toggle.Size = UDim2.new(0.8, 0, 0, 40) 
-Toggle.Position = UDim2.new(0.1, 0, 0.45, 0) 
-Toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55) 
-Toggle.Text = "自瞄: 關閉" 
+Toggle.Position = UDim2.new(0.1, 0, 0.3, 0) 
+Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60) 
+Toggle.Text = "自瞄狀態: OFF" 
 Toggle.TextColor3 = Color3.new(1, 1, 1) 
-Toggle.Font = Enum.Font.GothamSemibold
 Toggle.Parent = MainFrame 
-
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 8)
-BtnCorner.Parent = Toggle
  
 Toggle.MouseButton1Click:Connect(function() 
     SilentAimEnabled = not SilentAimEnabled 
-    Toggle.Text = SilentAimEnabled and "自瞄: 開啟" or "自瞄: 關閉" 
-    Toggle.BackgroundColor3 = SilentAimEnabled and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(50, 50, 55) 
+    Toggle.Text = SilentAimEnabled and "自瞄狀態: ON" or "自瞄狀態: OFF" 
+    Toggle.BackgroundColor3 = SilentAimEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) 
 end) 
+
+local FOVToggle = Instance.new("TextButton") 
+FOVToggle.Size = UDim2.new(0.8, 0, 0, 40) 
+FOVToggle.Position = UDim2.new(0.1, 0, 0.65, 0) 
+FOVToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60) 
+FOVToggle.Text = "顯示範圍: ON" 
+FOVToggle.TextColor3 = Color3.new(1, 1, 1) 
+FOVToggle.Parent = MainFrame 
+
+FOVToggle.MouseButton1Click:Connect(function() 
+    ShowFOV = not ShowFOV 
+    FOVToggle.Text = ShowFOV and "顯示範圍: ON" or "顯示範圍: OFF" 
+end)
  
 UserInputService.InputBegan:Connect(function(input, gpe) 
     if not gpe and input.KeyCode == Enum.KeyCode.Insert then 
         ScreenGui.Enabled = not ScreenGui.Enabled 
     end 
 end) 
+ 
+print("小傑獨立自瞄腳本 載入完成！按 Insert 鍵隱藏/顯示選單。")
