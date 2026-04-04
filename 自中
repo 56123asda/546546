@@ -7,8 +7,8 @@ ScreenGui.Name = "AimbotUI"
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -140, 0.5, -160)
+MainFrame.Size = UDim2.new(0, 200, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -20,44 +20,36 @@ UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-Title.Text = "Aimbot 控制面板"
+Title.Text = "Aimbot"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
+Title.TextSize = 16
 Title.Parent = MainFrame
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.Parent = Title
-
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(1, -28, 0, 2.5)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
 CloseBtn.Text = "X"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 16
+CloseBtn.TextSize = 14
 CloseBtn.BorderSizePixel = 0
 CloseBtn.Parent = Title
 
 local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.CornerRadius = UDim.new(0, 4)
 CloseCorner.Parent = CloseBtn
 
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
--- Aimbot开关
 local AimbotBtn = Instance.new("TextButton")
-AimbotBtn.Size = UDim2.new(0.8, 0, 0, 45)
-AimbotBtn.Position = UDim2.new(0.1, 0, 0.15, 0)
+AimbotBtn.Size = UDim2.new(0.7, 0, 0, 35)
+AimbotBtn.Position = UDim2.new(0.15, 0, 0.45, 0)
 AimbotBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-AimbotBtn.Text = "静默瞄准: OFF"
+AimbotBtn.Text = "OFF"
 AimbotBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimbotBtn.Font = Enum.Font.Gotham
+AimbotBtn.Font = Enum.Font.GothamBold
 AimbotBtn.TextSize = 16
 AimbotBtn.BorderSizePixel = 0
 AimbotBtn.Parent = MainFrame
@@ -66,39 +58,29 @@ local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = AimbotBtn
 
--- 状态文字
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(0.8, 0, 0, 30)
-StatusText.Position = UDim2.new(0.1, 0, 0.7, 0)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "状态: 关闭"
-StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusText.Font = Enum.Font.Gotham
-StatusText.TextSize = 14
-StatusText.Parent = MainFrame
-
 local aimbotOn = false
 
 AimbotBtn.MouseButton1Click:Connect(function()
     aimbotOn = not aimbotOn
     
     if aimbotOn then
-        AimbotBtn.Text = "静默瞄准: ON"
+        AimbotBtn.Text = "ON"
         AimbotBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-        StatusText.Text = "状态: 开启"
-        StatusText.TextColor3 = Color3.fromRGB(0, 255, 0)
-        
         if SilentAimModule and SilentAimModule.SetPlayerSilentAim then
             SilentAimModule:SetPlayerSilentAim(true)
         end
     else
-        AimbotBtn.Text = "静默瞄准: OFF"
+        AimbotBtn.Text = "OFF"
         AimbotBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        StatusText.Text = "状态: 关闭"
-        StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-        
         if SilentAimModule and SilentAimModule.SetPlayerSilentAim then
             SilentAimModule:SetPlayerSilentAim(false)
         end
     end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    if aimbotOn and SilentAimModule and SilentAimModule.SetPlayerSilentAim then
+        SilentAimModule:SetPlayerSilentAim(false)
+    end
+    ScreenGui:Destroy()
 end)
