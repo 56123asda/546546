@@ -1,24 +1,19 @@
--- [[ 核心模組設定 ]] 
+-- [[ 核心設定 ]] 
 local Players = game:GetService("Players") 
 local player = Players.LocalPlayer 
 local UserInputService = game:GetService("UserInputService")  
 local RunService = game:GetService("RunService") 
-local Camera = workspace.CurrentCamera
 
 -- 全域變數 
 local SilentAimEnabled = false 
 local PredictionEnabled = true 
 local PredictionAmount = 0.12 
 local maxRange = 1000 
-local TargetPosition = nil 
+local TargetPos = nil 
  
 -- [[ 1. 核心鎖定邏輯 ]] 
-local function getHRP(model) 
-    return model and model:FindFirstChild("HumanoidRootPart") 
-end 
- 
 local function getPredictedPosition(targetChar) 
-    local hrp = getHRP(targetChar) 
+    local hrp = targetChar:FindFirstChild("HumanoidRootPart")
     if not hrp then return nil end 
     local velocity = hrp.Velocity 
     if not PredictionEnabled or velocity.Magnitude < 2 then 
@@ -30,13 +25,13 @@ end
 local function getClosestPlayer() 
     local closest = nil 
     local dist = maxRange 
-    local lpHRP = getHRP(player.Character) 
+    local lpHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not lpHRP then return nil end 
  
     for _, p in ipairs(Players:GetPlayers()) do 
         if p ~= player and p.Character and p.Character:FindFirstChild("Humanoid") then 
             if p.Character.Humanoid.Health > 0 then 
-                local targetHRP = getHRP(p.Character) 
+                local targetHRP = p.Character:FindFirstChild("HumanoidRootPart")
                 if targetHRP then 
                     local d = (targetHRP.Position - lpHRP.Position).Magnitude 
                     if d < dist then 
@@ -50,31 +45,27 @@ local function getClosestPlayer()
     return closest 
 end 
  
--- [[ 2. 極簡安全版 Hook (解決特效消失與 UI 衝突) ]] 
-local function IsMouseOverUI()
-    local mousePos = UserInputService:GetMouseLocation()
-    local objects = player.PlayerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
-    for _, obj in ipairs(objects) do
-        if obj.Visible and obj.Active then
-            return true
-        end
-    end
-    return false
-end
-
+-- [[ 2. 零衝突 Hook (解決 UI 消失與技能失效) ]] 
 local mt = getrawmetatable(game)
 local oldIndex = mt.__index
 setreadonly(mt, false)
 
 mt.__index = newcclosure(function(t, k)
-    -- 僅在非腳本調用、自瞄開啟、有目標、且滑鼠不在 UI 上時執行
-    if not checkcaller() and SilentAimEnabled and TargetPosition and not IsMouseOverUI() then
-        if typeof(t) == "Instance" and t:IsA("Mouse") then
-            if k == "Hit" then
-                return CFrame.new(TargetPosition)
-            elseif k == "Target" then
-                local target = getClosestPlayer()
-                return target and getHRP(target.Character)
+    -- 核心防護：只在開啟自瞄且有目標時運作
+    if not checkcaller() and SilentAimEnabled and TargetPos then
+        -- 關鍵修復：檢查調用來源
+        local callingScript = getcallingscript()
+        local scriptName = callingScript and callingScript.Name or ""
+        
+        -- 僅允許戰鬥相關腳本獲取自瞄坐標，UI 腳本將獲取原始坐標
+        if scriptName == "CombatFramework" or scriptName == "Main" or scriptName == "Combat" then
+            if typeof(t) == "Instance" and t:IsA("Mouse") then
+                if k == "Hit" then
+                    return CFrame.new(TargetPos)
+                elseif k == "Target" then
+                    local target = getClosestPlayer()
+                    return target and target.Character:FindFirstChild("HumanoidRootPart")
+                end
             end
         end
     end
@@ -86,37 +77,41 @@ setreadonly(mt, true)
 -- [[ 3. 追蹤迴圈 ]] 
 RunService.Heartbeat:Connect(function() 
     if not SilentAimEnabled then 
-        TargetPosition = nil 
+        TargetPos = nil 
         return 
     end 
  
     local target = getClosestPlayer() 
     if target and target.Character then 
-        TargetPosition = getPredictedPosition(target.Character) 
+        TargetPos = getPredictedPosition(target.Character) 
     else 
-        TargetPosition = nil 
+        TargetPos = nil 
     end 
 end) 
  
--- [[ 4. UI 介面 (保持您的原始風格) ]] 
+-- [[ 4. 極簡 UI 介面 ]] 
 local ScreenGui = Instance.new("ScreenGui") 
-ScreenGui.Name = "XiaoJieAimbot_V2_Stable" 
+ScreenGui.Name = "XiaoJie_Fixed_V3" 
 ScreenGui.ResetOnSpawn = false 
 ScreenGui.Parent = player:WaitForChild("PlayerGui") 
  
 local MainFrame = Instance.new("Frame") 
 MainFrame.Size = UDim2.new(0, 220, 0, 130) 
 MainFrame.Position = UDim2.new(0.5, -110, 0.5, -65) 
-MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35) 
-MainFrame.BorderSizePixel = 2 
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35) 
+MainFrame.BorderSizePixel = 0 
 MainFrame.Active = true 
 MainFrame.Draggable = true 
 MainFrame.Parent = ScreenGui 
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 10)
+Corner.Parent = MainFrame
  
 local Title = Instance.new("TextLabel") 
 Title.Size = UDim2.new(1, 0, 0, 35) 
-Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20) 
-Title.Text = "小傑腳本 V2 超穩定版" 
+Title.BackgroundTransparency = 1
+Title.Text = "小傑自瞄 V2 (修復版)" 
 Title.TextColor3 = Color3.new(1, 1, 1) 
 Title.Font = Enum.Font.GothamBold 
 Title.Parent = MainFrame 
@@ -124,15 +119,20 @@ Title.Parent = MainFrame
 local Toggle = Instance.new("TextButton") 
 Toggle.Size = UDim2.new(0.8, 0, 0, 40) 
 Toggle.Position = UDim2.new(0.1, 0, 0.45, 0) 
-Toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60) 
-Toggle.Text = "自瞄狀態: OFF" 
+Toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 55) 
+Toggle.Text = "自瞄: 關閉" 
 Toggle.TextColor3 = Color3.new(1, 1, 1) 
+Toggle.Font = Enum.Font.GothamSemibold
 Toggle.Parent = MainFrame 
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 8)
+BtnCorner.Parent = Toggle
  
 Toggle.MouseButton1Click:Connect(function() 
     SilentAimEnabled = not SilentAimEnabled 
-    Toggle.Text = SilentAimEnabled and "自瞄狀態: ON" or "自瞄狀態: OFF" 
-    Toggle.BackgroundColor3 = SilentAimEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60) 
+    Toggle.Text = SilentAimEnabled and "自瞄: 開啟" or "自瞄: 關閉" 
+    Toggle.BackgroundColor3 = SilentAimEnabled and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(50, 50, 55) 
 end) 
  
 UserInputService.InputBegan:Connect(function(input, gpe) 
@@ -140,5 +140,3 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         ScreenGui.Enabled = not ScreenGui.Enabled 
     end 
 end) 
- 
-print("小傑腳本 V2 超穩定版已載入！")
