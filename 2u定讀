@@ -54,7 +54,7 @@ loadSettings()
 -- 🔑 換服後重新執行自己
 if queue_on_teleport then
     queue_on_teleport([[
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/ycjh002-creator/56/refs/heads/main/12"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/56123asda/546546/refs/heads/main/2u%E5%AE%9A%E8%AE%80"))()
     ]])
 end
 
