@@ -1,0 +1,398 @@
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local flying = false
+local speed = 50
+local minSpeed = 1
+local maxSpeed = 10000
+local attachment, lv, ao, character, humanoid, root
+local lockedTracks = {}
+local animateScript = nil
+
+
+local existing = player:WaitForChild("PlayerGui"):FindFirstChild("XJ Fly")
+if existing then existing:Destroy() end
+
+
+local m = Instance.new("ScreenGui")
+local f = Instance.new("Frame")
+local u = Instance.new("TextButton") -- 
+local d = Instance.new("TextButton") -- 
+local o = Instance.new("TextButton") -- 
+local t = Instance.new("TextLabel")  -- 
+local p = Instance.new("TextButton") -- 
+local s = Instance.new("TextBox")    -- 
+local n = Instance.new("TextButton") -- -
+local c = Instance.new("TextButton") -- 
+local h = Instance.new("TextButton") -- 
+local h2 = Instance.new("TextButton") -- 
+
+m.Name = "RJRFly"
+m.Parent = player:WaitForChild("PlayerGui")
+m.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+m.ResetOnSpawn = false
+
+f.Parent = m
+f.BackgroundColor3 = Color3.fromRGB(163, 255, 137)
+f.BorderColor3 = Color3.fromRGB(103, 221, 213)
+f.Position = UDim2.new(0.100320168, 0, 0.379746825, 0)
+f.Size = UDim2.new(0, 190, 0, 57)
+f.Active = true
+f.Draggable = true
+
+local function b(x, y, z, q)
+	x.Name = y
+	x.Parent = f
+	x.Position = z
+	x.Size = q
+	x.Font = Enum.Font.SourceSans
+	x.Text = y
+	x.TextColor3 = Color3.fromRGB(0, 0, 0)
+	x.TextSize = 14
+	x.TextScaled = true
+	x.TextWrapped = true
+end
+
+b(u, "↑", UDim2.new(0, 0, 0, 0), UDim2.new(0, 44, 0, 28))
+u.BackgroundColor3 = Color3.fromRGB(79, 255, 152)
+u.Text = "加速"
+
+b(d, "↓", UDim2.new(0, 0, 0.491228074, 0), UDim2.new(0, 44, 0, 28))
+d.BackgroundColor3 = Color3.fromRGB(215, 255, 121)
+d.Text = "减速"
+
+o.Name = "onoff"
+o.Parent = f
+o.BackgroundColor3 = Color3.fromRGB(255, 249, 74)
+o.Position = UDim2.new(0.702823281, 0, 0.491228074, 0)
+o.Size = UDim2.new(0, 56, 0, 28)
+o.Font = Enum.Font.SourceSans
+o.Text = "開始"
+o.TextColor3 = Color3.fromRGB(0, 0, 0)
+o.TextScaled = true
+o.TextSize = 14
+o.TextWrapped = true
+
+p.Name = "plus"
+p.Parent = f
+p.BackgroundColor3 = Color3.fromRGB(133, 145, 255)
+p.Position = UDim2.new(0.231578946, 0, 0, 0)
+p.Size = UDim2.new(0, 45, 0, 28)
+p.Font = Enum.Font.SourceSans
+p.Text = "+5"
+p.TextColor3 = Color3.fromRGB(0, 0, 0)
+p.TextScaled = true
+p.TextSize = 14
+p.TextWrapped = true
+
+n.Name = "mine"
+n.Parent = f
+n.BackgroundColor3 = Color3.fromRGB(123, 255, 247)
+n.Position = UDim2.new(0.231578946, 0, 0.491228074, 0)
+n.Size = UDim2.new(0, 45, 0, 29)
+n.Font = Enum.Font.SourceSans
+n.Text = "-5"
+n.TextColor3 = Color3.fromRGB(0, 0, 0)
+n.TextScaled = true
+n.TextSize = 14
+n.TextWrapped = true
+
+t.Parent = f
+t.BackgroundColor3 = Color3.fromRGB(242, 60, 255)
+t.Position = UDim2.new(0.469327301, 0, 0, 0)
+t.Size = UDim2.new(0, 100, 0, 28)
+t.Font = Enum.Font.SourceSans
+t.Text = "XJ FLY"
+t.TextColor3 = Color3.fromRGB(0, 0, 0)
+t.TextScaled = true
+t.TextSize = 14
+t.TextWrapped = true
+
+s.Parent = f
+s.Name = "speed"
+s.BackgroundColor3 = Color3.fromRGB(255, 85, 0)
+s.Position = UDim2.new(0.468421042, 0, 0.491228074, 0)
+s.Size = UDim2.new(0, 44, 0, 28)
+s.Font = Enum.Font.SourceSans
+s.Text = tostring(speed)
+s.TextColor3 = Color3.fromRGB(0, 0, 0)
+s.TextScaled = true
+s.TextSize = 14
+s.TextWrapped = true
+s.ClearTextOnFocus = false
+s.TextEditable = true
+s.PlaceholderText = "1-150"
+
+c.Name = "Close"
+c.Parent = f
+c.BackgroundColor3 = Color3.fromRGB(225, 25, 0)
+c.Font = Enum.Font.SourceSans
+c.Size = UDim2.new(0, 45, 0, 28)
+c.Text = "關閉"
+c.TextSize = 30
+c.Position = UDim2.new(0, 0, -1, 27)
+
+h.Name = "minimize"
+h.Parent = f
+h.BackgroundColor3 = Color3.fromRGB(192, 150, 230)
+h.Font = Enum.Font.SourceSans
+h.Size = UDim2.new(0, 45, 0, 28)
+h.Text = "隐藏"
+h.TextSize = 30
+h.Position = UDim2.new(0, 44, -1, 27)
+
+h2.Name = "minimize2"
+h2.Parent = f
+h2.BackgroundColor3 = Color3.fromRGB(192, 150, 230)
+h2.Font = Enum.Font.SourceSans
+h2.Size = UDim2.new(0, 45, 0, 28)
+h2.Text = "顯示"
+h2.TextSize = 30
+h2.Position = UDim2.new(0, 44, -1, 57)
+h2.Visible = false
+
+
+local function clampSpeed(v)
+	v = math.floor(tonumber(v) or speed)
+	if v < minSpeed then v = minSpeed end
+	if v > maxSpeed then v = maxSpeed end
+	return v
+end
+
+local function setSpeed(v)
+	speed = clampSpeed(v)
+	s.Text = tostring(speed)
+end
+
+local function changeSpeed(delta)
+	setSpeed(speed + delta)
+end
+
+-- // PHYSICS
+local function clearPhysics()
+	if attachment then
+		attachment:Destroy()
+		attachment = nil
+	end
+	lv = nil
+	ao = nil
+end
+local function lockPose()
+	if not humanoid or not character then return end
+
+	animateScript = character:FindFirstChild("Animate")
+	if animateScript then
+		animateScript.Disabled = true
+	end
+
+
+	lockedTracks = {}
+	for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+		track:AdjustSpeed(0)
+		table.insert(lockedTracks, track)
+	end
+end
+
+local function unlockPose()
+	for _, track in ipairs(lockedTracks) do
+		if track then
+			pcall(function()
+				track:AdjustSpeed(1)
+			end)
+		end
+	end
+	lockedTracks = {}
+
+	if animateScript then
+		animateScript.Disabled = false
+		animateScript = nil
+	elseif character then
+		local a = character:FindFirstChild("Animate")
+		if a then a.Disabled = false end
+	end
+end
+
+
+local function keepPoseLocked()
+	if not flying or not humanoid then return end
+	for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+		if track.Speed ~= 0 then
+			track:AdjustSpeed(0)
+		end
+	end
+end
+
+local function setupPhysics()
+	character = player.Character or player.CharacterAdded:Wait()
+	humanoid = character:WaitForChild("Humanoid")
+	root = character:WaitForChild("HumanoidRootPart")
+
+	clearPhysics()
+	if not flying then return end
+
+	lockPose()
+
+	humanoid.PlatformStand = true
+	attachment = Instance.new("Attachment")
+	attachment.Parent = root
+
+	lv = Instance.new("LinearVelocity")
+	lv.MaxForce = 9e9
+	lv.VectorVelocity = Vector3.zero
+	lv.Attachment0 = attachment
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.Parent = attachment
+
+	ao = Instance.new("AlignOrientation")
+	ao.MaxTorque = 9e9
+	ao.Responsiveness = 200
+	ao.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	ao.Attachment0 = attachment
+	ao.Parent = attachment
+end
+
+local function stopFly()
+	flying = false
+	o.Text = "开始"
+	if humanoid then
+		humanoid.PlatformStand = false
+	end
+	clearPhysics()
+	unlockPose()
+end
+
+local function startFly()
+	flying = true
+	o.Text = "停止"
+	setupPhysics()
+end
+
+local function toggleFly()
+	if flying then
+		stopFly()
+	else
+		startFly()
+	end
+end
+
+
+player.CharacterAdded:Connect(function()
+	task.wait(0.15)
+	character = player.Character
+	humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	root = character and character:FindFirstChild("HumanoidRootPart")
+	if flying then
+		setupPhysics()
+	end
+end)
+
+
+local PlayerModule = require(player.PlayerScripts:WaitForChild("PlayerModule"))
+local Controls = PlayerModule:GetControls()
+
+local conn = RunService.RenderStepped:Connect(function()
+	if not flying or not root or not lv or not ao or not workspace.CurrentCamera then
+		return
+	end
+
+	keepPoseLocked()
+
+	local cam = workspace.CurrentCamera
+	local moveVector = Controls:GetMoveVector()
+	local direction = Vector3.zero
+
+	if moveVector.Magnitude > 0 then
+		direction = (cam.CFrame.LookVector * -moveVector.Z) + (cam.CFrame.RightVector * moveVector.X)
+	end
+
+	if direction.Magnitude > 0 then
+		lv.VectorVelocity = direction.Unit * speed
+	else
+		lv.VectorVelocity = Vector3.zero
+	end
+
+	ao.CFrame = cam.CFrame
+end)
+
+
+o.MouseButton1Click:Connect(toggleFly)
+
+p.MouseButton1Click:Connect(function()
+	changeSpeed(5)
+end)
+
+n.MouseButton1Click:Connect(function()
+	changeSpeed(-5)
+end)
+
+local holdConn = nil
+local function startHold(delta)
+	if holdConn then holdConn:Disconnect() end
+	changeSpeed(delta)
+	holdConn = RunService.Heartbeat:Connect(function()
+		changeSpeed(delta)
+	end)
+end
+
+local function stopHold()
+	if holdConn then
+		holdConn:Disconnect()
+		holdConn = nil
+	end
+end
+
+u.MouseButton1Down:Connect(function() startHold(1) end)
+u.MouseButton1Up:Connect(stopHold)
+u.MouseLeave:Connect(stopHold)
+
+d.MouseButton1Down:Connect(function() startHold(-1) end)
+d.MouseButton1Up:Connect(stopHold)
+d.MouseLeave:Connect(stopHold)
+
+s.FocusLost:Connect(function()
+	if s.Text == "" then
+		s.Text = tostring(speed)
+		return
+	end
+	local ns = tonumber(s.Text)
+	if ns then
+		setSpeed(ns)
+	else
+		s.Text = tostring(speed)
+	end
+end)
+
+c.MouseButton1Click:Connect(function()
+	stopFly()
+	if conn then conn:Disconnect() end
+	stopHold()
+	m:Destroy()
+end)
+
+h.MouseButton1Click:Connect(function()
+	u.Visible = false
+	d.Visible = false
+	o.Visible = false
+	p.Visible = false
+	s.Visible = false
+	n.Visible = false
+	h.Visible = false
+	h2.Visible = true
+	f.BackgroundTransparency = 1
+	c.Position = UDim2.new(0, 0, -1, 57)
+end)
+
+h2.MouseButton1Click:Connect(function()
+	u.Visible = true
+	d.Visible = true
+	o.Visible = true
+	p.Visible = true
+	s.Visible = true
+	n.Visible = true
+	h.Visible = true
+	h2.Visible = false
+	f.BackgroundTransparency = 0
+	c.Position = UDim2.new(0, 0, -1, 27)
+end)
