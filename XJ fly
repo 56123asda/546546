@@ -380,53 +380,14 @@ end)
 
 nc.MouseButton1Click:Connect(ToggleNoclip)
 
-local plusHoldConn = nil
-local plusHolding = false
-
-local function stopPlusHold()
-    plusHolding = false
-    if plusHoldConn then plusHoldConn:Disconnect(); plusHoldConn = nil end
-end
-
-p.MouseButton1Down:Connect(function()
-    if plusHolding then return end
-    plusHolding = true
+-- 點擊 +5 按鈕（單次點擊）
+p.MouseButton1Click:Connect(function()
     changeSpeed(5)
-    task.delay(0.9, function()
-        if plusHolding and not plusHoldConn then
-            plusHoldConn = RunService.Heartbeat:Connect(function()
-                changeSpeed(5)
-            end)
-        end
-    end)
 end)
 
-local minusHoldConn = nil
-local minusHolding = false
-
-local function stopMinusHold()
-    minusHolding = false
-    if minusHoldConn then minusHoldConn:Disconnect(); minusHoldConn = nil end
-end
-
-n.MouseButton1Down:Connect(function()
-    if minusHolding then return end
-    minusHolding = true
+-- 點擊 -5 按鈕（單次點擊）
+n.MouseButton1Click:Connect(function()
     changeSpeed(-5)
-    task.delay(0.9, function()
-        if minusHolding and not minusHoldConn then
-            minusHoldConn = RunService.Heartbeat:Connect(function()
-                changeSpeed(-5)
-            end)
-        end
-    end)
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        stopPlusHold()
-        stopMinusHold()
-    end
 end)
 
 s.FocusLost:Connect(function()
@@ -439,8 +400,6 @@ c.MouseButton1Click:Connect(function()
 	stopFly()
 	if conn then conn:Disconnect() end
 	if noclipConn then noclipConn:Disconnect() end
-	stopPlusHold()
-	stopMinusHold()
 	m:Destroy()
 end)
 
